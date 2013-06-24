@@ -12,6 +12,8 @@ ACTION_FLAG_SPAM = 'flag_spam'
 THRESHOLD_SCORE_SPAM = 0.1
 SCORE_DEFAULT = 0.5
 
+#todo(michael): move creating engine out of this file.
+
 INIFILE = "config.ini"
 
 # Parcing config file
@@ -26,10 +28,15 @@ db_name = ini_config.get('postgresql', 'database')
 # Creating an engine
 engine = create_engine('postgresql://%s:%s@%s:%s/%s' % (db_user, passwd, host,
                                                                  port, db_name))
-# Creates tables if not exist.
-Base.metadata.create_all(engine)
 # Sessionmaker
-Session = sessionmaker(bind=engine)
+Session = sessionmaker()
+
+def bind_engine(engine, session, base):
+    session.configure(bind=engine)
+    Session = session
+    base.metadata.bind = engine
+    base.metadata.create_all(engine)
+
 
 # todo(michael): substitute exeptions with logging.
 
@@ -137,7 +144,7 @@ def flag_spam_update_logic(annot, session):
         annot.score = THRESHOLD_SCORE_SPAM
         # If the author of the annotation has low score then the annotation is
         # spam.
-        annot.author.score <= THRESHOLD_SCORE_SPAM:
+        if annot.author.score <= THRESHOLD_SCORE_SPAM:
             # The annotation is spam !!!
             annot.score = 0
             annot.is_spam = True
