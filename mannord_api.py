@@ -35,16 +35,16 @@ def undo_flag_as_spam(annotation_id, user_id):
 
 def is_annotation_spam(annotation_id):
     """ Return whether an annotation is spam or not."""
-    is_annotation_spam_(annotation_id)
+    return is_annotation_spam_(annotation_id)
 
 
 def is_user_spammer(user_id):
     """ Returns whether a user is spammer or not."""
-    is_user_spammer_(user_id)
+    return is_user_spammer_(user_id)
 
 
 def get_annotation_score(annotation_id):
     """ Returns annotation score which is between zero and one.
     An annotation is more important if it has higher score.
     """
-    get_annotation_score_(annotation_id)
+    return get_annotation_score_(annotation_id)

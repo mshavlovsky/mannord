@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, and_
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 import ConfigParser
@@ -121,7 +121,9 @@ def flag_as_spam_(annotation_id, user_id, timestamp):
     session.commit()
 
     # If the annotation is spam already then there is nothing to do.
-    if is_annotation_spam_(annotation_id, session=session):
+    # todo(michael): it is not good that is is_annotation_spam_ create extra
+    # session.
+    if is_annotation_spam_(annotation_id):
         session.close()
         return 1
     # Update the annotation recored after it was flagged as spam.
@@ -137,6 +139,7 @@ def flag_spam_update_logic(annot, session):
                             and_(Action.annotation_id == annot.id,
                                  Action.type == ACTION_FLAG_SPAM)).all()
     flag_count = len(action_list)
+    author = annot.author
     # Simple spam flag logic.
     if flag_count == 1:
         # The annotation is probably spam, so make it's weigh smaller
