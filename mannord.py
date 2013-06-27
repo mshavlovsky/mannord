@@ -4,6 +4,7 @@ from datetime import datetime
 import ConfigParser
 from tables import *
 
+
 # Constants
 ACTION_UPVOTE = 'upvote'
 ACTION_DOWNVOTE = 'downvote'
@@ -13,6 +14,7 @@ THRESHOLD_SCORE_SPAM = 0.1
 SCORE_DEFAULT = 0.5
 
 #todo(michael): move creating engine out of this file.
+#todo(michael): take care of cases when request info on nonexisting item.
 
 INIFILE = "config.ini"
 
@@ -121,7 +123,7 @@ def flag_as_spam_(annotation_id, user_id, timestamp):
     session.commit()
 
     # If the annotation is spam already then there is nothing to do.
-    # todo(michael): it is not good that is is_annotation_spam_ create extra
+    # todo(michael): it is not good that is_annotation_spam_ creates extra
     # session.
     if is_annotation_spam_(annotation_id):
         session.close()
