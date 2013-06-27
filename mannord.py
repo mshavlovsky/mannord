@@ -30,8 +30,6 @@ db_name = ini_config.get('postgresql', 'database')
 # Creating an engine
 engine = create_engine('postgresql://%s:%s@%s:%s/%s' % (db_user, passwd, host,
                                                                  port, db_name))
-# Sessionmaker
-Session = sessionmaker()
 
 def bind_engine(engine, session, base):
     session.configure(bind=engine)
@@ -43,7 +41,7 @@ def bind_engine(engine, session, base):
 # todo(michael): substitute exeptions with logging.
 
 
-def add_user_(user_id):
+def add_user(user_id):
     session = Session()
     user = session.query(User).filter_by(id=user_id).first()
     if user is None:
@@ -53,7 +51,16 @@ def add_user_(user_id):
     session.close()
 
 
-def add_annotation_(annotation_id, user_id):
+def add_annotation(annotation_id, user_id):
+    """ Adds annotation info to the db.
+    todo(michael): Clarify what is the best time to create an annotation.
+                   we can do it when we call functions on it (like when call
+                   flag_as_spam(...)), but then we need to provide all arguments
+                   necessary for creating annotation record, which can be
+                   annoying. Another option is to call  this function when
+                   annotation is created which adds extra code outside the
+                   package.
+                   """
     session = Session()
     # Checks whether the user exists in the db or not, if not then create it.
     author = session.query(User).filter_by(id=user_id).first()
@@ -73,7 +80,7 @@ def add_annotation_(annotation_id, user_id):
     session.close()
 
 
-def delete_annotation_(annotation_id):
+def delete_annotation(annotation_id):
     session = Session()
     # Checks whether the annotation exists or not.
     annot = session.query(Annotation).filter_by(id=annotation_id).first()
@@ -89,7 +96,7 @@ def delete_annotation_(annotation_id):
     session.close()
 
 
-def flag_as_spam_(annotation_id, user_id, timestamp):
+def flag_as_spam(annotation_id, user_id, timestamp):
     """ Method returns
             1 on succes
             0 when annotation was already flagged as spam by the user
@@ -125,7 +132,7 @@ def flag_as_spam_(annotation_id, user_id, timestamp):
     # If the annotation is spam already then there is nothing to do.
     # todo(michael): it is not good that is_annotation_spam_ creates extra
     # session.
-    if is_annotation_spam_(annotation_id):
+    if is_annotation_spam(annotation_id):
         session.close()
         return 1
     # Update the annotation recored after it was flagged as spam.
@@ -165,6 +172,7 @@ def flag_spam_update_logic(annot, session):
 
 
 def undo_flag_spam_logic(annot, session):
+    """Call this function when a user removes spam flag from an annotation."""
     # todo(michael): undo logic in precence of votes should be more elaborated.
     # Original action was deleted from the db.
     action_list = session.query(Action).filter(
@@ -189,7 +197,7 @@ def undo_flag_spam_logic(annot, session):
     session.commit()
 
 
-def undo_flag_as_spam_(annotation_id, user_id):
+def undo_flag_as_spam(annotation_id, user_id):
     session = Session()
     # Retreivning annoataion and user objects.
     annot = session.query(Annotation).filter_by(id=annotation_id).first()
@@ -208,21 +216,26 @@ def undo_flag_as_spam_(annotation_id, user_id):
     session.close()
 
 
-def is_annotation_spam_(annotation_id):
+def is_annotation_spam(annotation_id):
+    """ Return whether an annotation is spam or not."""
     session = Session()
     annot = session.query(Annotation).filter_by(id=annotation_id).first()
     session.close()
     return annot.is_spam
 
 
-def is_user_spammer_(user_id):
+def is_user_spammer(user_id):
+    """ Returns whether a user is spammer or not."""
     session = Session()
     user = session.query(User).filter_by(id=user_id).first()
     session.close()
     return user.is_spammer
 
 
-def get_annotation_score_(annotation_id):
+def get_annotation_score(annotation_id):
+    """ Returns annotation score which is between zero and one.
+    An annotation is more important if it has higher score.
+    """
     session = Session()
     annot = session.query(Annotation).filter_by(id=annotation_id).first()
     session.close()
