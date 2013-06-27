@@ -2,34 +2,12 @@ from sqlalchemy import create_engine, and_
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 import ConfigParser
-from tables import *
+from models import *
 
 
-# Constants
-ACTION_UPVOTE = 'upvote'
-ACTION_DOWNVOTE = 'downvote'
-ACTION_FLAG_SPAM = 'flag_spam'
+# todo(michael): take care of cases when request info on nonexisting item.
+# todo(michael): substitute exceptions with logging.
 
-THRESHOLD_SCORE_SPAM = 0.1
-SCORE_DEFAULT = 0.5
-
-#todo(michael): move creating engine out of this file.
-#todo(michael): take care of cases when request info on nonexisting item.
-
-INIFILE = "config.ini"
-
-# Parcing config file
-ini_config = ConfigParser.ConfigParser()
-ini_config.readfp(open(INIFILE))
-db_user = ini_config.get('postgresql', 'user')
-passwd = ini_config.get('postgresql', 'passwd')
-host = ini_config.get('postgresql', 'host')
-port = int(ini_config.get('postgresql', 'port'))
-db_name = ini_config.get('postgresql', 'database')
-
-# Creating an engine
-engine = create_engine('postgresql://%s:%s@%s:%s/%s' % (db_user, passwd, host,
-                                                                 port, db_name))
 
 def bind_engine(engine, session, base):
     session.configure(bind=engine)
@@ -37,111 +15,50 @@ def bind_engine(engine, session, base):
     base.metadata.bind = engine
     base.metadata.create_all(engine)
 
+# Action - a module level class which inherits from ActionMixin
+Action = ActionMixin
 
-# todo(michael): substitute exeptions with logging.
+# Binding Action
+def bind_action_class(actionclass):
+    Action = actionclass
 
-
-def add_user(user_id):
-    session = Session()
-    user = session.query(User).filter_by(id=user_id).first()
-    if user is None:
-        user = User(user_id)
-        session.add(user)
-        session.commit()
-    session.close()
-
-
-def add_annotation(annotation_id, user_id):
-    """ Adds annotation info to the db.
-    todo(michael): Clarify what is the best time to create an annotation.
-                   we can do it when we call functions on it (like when call
-                   flag_as_spam(...)), but then we need to provide all arguments
-                   necessary for creating annotation record, which can be
-                   annoying. Another option is to call  this function when
-                   annotation is created which adds extra code outside the
-                   package.
-                   """
-    session = Session()
-    # Checks whether the user exists in the db or not, if not then create it.
-    author = session.query(User).filter_by(id=user_id).first()
-    if author is None:
-        author = User(user_id)
-        session.add(author)
-        session.flush()
-    # Check whether the annotation exists or not.
-    annot = session.query(Annotation).filter_by(id=annotation_id).first()
-    if annot is not None:
-        session.commit()
-        session.close()
-        return
-    # Creates and adds annotation to the DB.
-    session.add(Annotation(annotation_id, user_id))
-    session.commit()
-    session.close()
-
-
-def delete_annotation(annotation_id):
-    session = Session()
-    # Checks whether the annotation exists or not.
-    annot = session.query(Annotation).filter_by(id=annotation_id).first()
-    if annot is None:
-        # There is nothing to do.
-        session.close()
-        return
-    # First, delete all actions related to the annotation.
-    session.query(Action).filter_by(annotation_id=annotation_id).delete()
-    # Then delete the annotation itself.
-    session.query(Annotation).filter_by(id=annotation_id).delete()
-    session.commit()
-    session.close()
-
-
-def flag_as_spam(annotation_id, user_id, timestamp):
-    """ Method returns
-            1 on succes
+def flag_as_spam(annotation, user, timestamp, session):
+    """ Action - flag a annotation as a spam.
+    The method returns:
+            1 on success
             0 when annotation was already flagged as spam by the user
+    Arguments:
+        - annotation is an object of a class which inherits from AnnotationMixin
+        - user is an object of a class which inherits from UserMixin
+        - timestamp is an object of datetime.datetime
+        - session is a session object
+        - ActionClass is a class object which inherits
     """
-    session = Session()
-    # Checks whether the user and the annotation exist in the DB.
-    # todo(michael): move checking to a separate function?
-    user = session.query(User).filter_by(id=user_id).first()
-    if user is None:
-        raise Exception("User with id %s does not exist in the DB" % user_id)
-    annot = session.query(Annotation).filter_by(id=annotation_id).first()
-    if annot is None:
-        raise Exception("Annotation with id %s does not exist in the DB" %
-                                                                  annotation_id)
-
-    # Okay, the user and the annotation exist.
     # Now check whether the annotation was flagged as a spam by the user or not.
-    action = session.query(Action).filter(and_(Action.user_id == user_id,
-                                Action.annotation_id == annotation_id,
-                                Action.type == ACTION_FLAG_SPAM)).first()
+    action = Action.get_action(annotation.id, user.id, ACTION_FLAG_SPAM,session)
     if action is not None:
-        # The user has already flagged the annotation as spam.
-        session.close()
+        # The user has already flagged the annotation as spam. Nothing to do.
         return 0
 
     # Okay, the user flagged the annotation as spam the first time.
     # Add a record about the action to the DB.
-    action = Action(annotation_id, user_id, ACTION_FLAG_SPAM, user.score,
-                                                              timestamp)
-    session.add(action)
-    session.commit()
-
-    # If the annotation is spam already then there is nothing to do.
-    # todo(michael): it is not good that is_annotation_spam_ creates extra
-    # session.
-    if is_annotation_spam(annotation_id):
-        session.close()
+    Action.add_action(annotation.id, user.id, ACTION_FLAG_SPAM, user.score,
+                      timestamp, session)
+    # Now, if we have enough evidence, mark the annotation as spam
+    # and the author as spammer.
+    # If the annotation is already spam then there is nothing to do.
+    if is_annotation_spam(annotation, session):
         return 1
+
+
+
+    # todo(michael): continue from here
     # Update the annotation recored after it was flagged as spam.
-    flag_spam_update_logic(annot, session)
-    session.commit()
-    session.close()
+    flag_spam_update_logic(annotation, session)
+    session.flush()
 
 
-def flag_spam_update_logic(annot, session):
+def flag_spam_update_logic(annotation, session):
     # Counts how many times the annotation was flagged as a spam and then
     # make desicion whether the annotation is spam or not.
     action_list = session.query(Action).filter(
@@ -216,12 +133,9 @@ def undo_flag_as_spam(annotation_id, user_id):
     session.close()
 
 
-def is_annotation_spam(annotation_id):
+def is_annotation_spam(annotation, session):
     """ Return whether an annotation is spam or not."""
-    session = Session()
-    annot = session.query(Annotation).filter_by(id=annotation_id).first()
-    session.close()
-    return annot.is_spam
+    return annotation.is_annotation_spam(annotation.id, session)
 
 
 def is_user_spammer(user_id):
