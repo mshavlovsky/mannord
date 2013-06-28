@@ -1,5 +1,3 @@
-# Tables definition
-
 from sqlalchemy import (Column, Integer, Float, String, Boolean,
                         ForeignKey, DateTime, Sequence)
 from sqlalchemy.orm import relationship, backref
@@ -66,19 +64,6 @@ class AnnotationMixin(object):
     def author(cls):
         return relationship(USER_CLASS_NAME)
 
-    @classmethod
-    def is_annotation_spam(cls, annotation_id, session):
-        annotation = session.query(cls).filter_by(id = annotation_id).first()
-        if annotation is not None:
-            return annotation.is_spam
-        return None
-
-    @classmethod
-    def increase_spam_counter(cls, annotation_id, session):
-        annotation = session.query(cls).filter_by(id = annotation_id).first()
-        annotation.spam_flag_counter = annotation.spam_flag_counter + 1
-        session.flush()
-
 
 class ActionMixin(object):
 
@@ -124,7 +109,6 @@ class ActionMixin(object):
         action = cls(annotation_id, user_id, action_type, value, timestamp)
         session.add(action)
         session.flush()
-
 
     # todo(michael): I assume that a class whcih will inherit this mixin
     # will use next constructor.
