@@ -1,6 +1,7 @@
 from sqlalchemy import (Column, Integer, Float, String, Boolean,
-                        ForeignKey, DateTime, Sequence)
+                        ForeignKey, DateTime, Sequence, and_)
 from sqlalchemy.orm import relationship, backref
+from sqlalchemy.ext.declarative import declared_attr
 
 
 # todo(michael): there is an issue when using foreign keys.
@@ -28,7 +29,7 @@ class UserMixin(object):
     def id(cls):
         return Column(String, primary_key=True)
 
-    is_spammer = Column(Boolean)
+    is_spammer = Column(Boolean, default=False)
     # score is "internal" reputation and it is a real value between 0 and 1,
     # We trust 100% to a user with a score 1 and we don't trust to a user with
     # score 0.
@@ -110,11 +111,11 @@ class ActionMixin(object):
         session.add(action)
         session.flush()
 
-    # todo(michael): I assume that a class whcih will inherit this mixin
-    # will use next constructor.
+    # todo(michael): I assume that a class which inherits this mixin
+    # will call next constructor.
     def __init__(self, annotation_id, user_id, action_type, value, timestamp):
         self.annotation_id = annotation_id
         self.user_id = user_id
-        self.type = type
+        self.type = action_type
         self.value = value
         self.timestamp = timestamp

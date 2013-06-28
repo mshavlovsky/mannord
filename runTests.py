@@ -1,8 +1,39 @@
 #!/usr/bin/python
 
-from mannord_api import *
+from models import *
+from mannord import *
 from datetime import datetime
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 import unittest
+
+Base = declarative_base()
+
+
+class User(Base, UserMixin):
+
+    __tablename__ = 'user'
+
+    def __init__(self, user_id):
+        self.id = user_id
+
+
+class Annotation(Base, AnnotationMixin):
+
+    __tablename__ = 'annotation'
+
+    def __init__(self, annotation_id, user_id):
+        self.id = annotation_id
+        self.author_id = user_id
+
+class Action(ActionMixin, Base):
+
+    __tablename__ = 'action'
+
+    def __init__(self, annotation_id, user_id, action_type, value, timestamp):
+        super(Action, self).__init__(annotation_id, user_id,
+                                     action_type, value, timestamp)
+
 
 
 class TestSpamFlag(unittest.TestCase):
@@ -11,48 +42,38 @@ class TestSpamFlag(unittest.TestCase):
         engine = create_engine('sqlite:///:memory:')
         Session = sessionmaker()
         bind_engine(engine, Session, Base)
-        # Creating users ad annotations.
-        add_user('user_1')
-        add_user('user_2')
-        add_user('user_3')
-        add_annotation('annot_1', 'user_1')
+        session = Session()
 
-        # First spam flag.
-        flag_as_spam('annot_1', 'user_2', datetime.utcnow())
-        annot1_score = get_annotation_score('annot_1')
-        self.assertTrue(annot1_score == THRESHOLD_SCORE_SPAM)
-        is_spam = is_annotation_spam('annot_1')
-        self.assertTrue(is_spam == False)
+        # Create users and annotations
+        user1 = User('user1')
+        user2 = User('user2')
+        user3 = User('user3')
+        annot1 = Annotation('annot1', 'user1')
+        session.add(user1)
+        session.add(user2)
+        session.add(user3)
+        session.add(annot1)
+        session.commit()
 
-        # Second spam flag.
-        flag_as_spam('annot_1', 'user_3', datetime.utcnow())
-        is_spam = is_annotation_spam('annot_1')
-        self.assertTrue(is_spam == True)
-        is_spammer = is_user_spammer('user_1')
+        # Adding two flags
+        flag_as_spam(annot1, user2, datetime.utcnow(), session, Action)
+        self.assertTrue(annot1.spam_flag_counter == 1)
+        self.assertTrue(annot1.is_spam == False)
+        self.assertTrue(annot1.score == THRESHOLD_SCORE_SPAM)
+        flag_as_spam(annot1, user3, datetime.utcnow(), session, Action)
+        self.assertTrue(annot1.score == 0)
+        self.assertTrue(annot1.is_spam == True)
+        self.assertTrue(annot1.spam_flag_counter == 2)
 
-        # Undo the second spam flag.
-        undo_flag_as_spam('annot_1', 'user_3')
-        is_spam = is_annotation_spam('annot_1')
-        self.assertTrue(is_spam == True)
-
-        # Adding second annotation by the same author.
-        # Now only one vote is enough for marking annotation as a spam
-        add_annotation('annot_2', 'user_1')
-        is_spam = is_annotation_spam('annot_2')
-        self.assertTrue(is_spam == False)
-        flag_as_spam('annot_2', 'user_2', datetime.utcnow())
-        is_spam = is_annotation_spam('annot_2')
-        self.assertTrue(is_spam == True)
-
-        # Now let's undo spam flag.
-        undo_flag_as_spam('annot_2', 'user_2')
-        is_spam = is_annotation_spam('annot_2')
-        self.assertTrue(is_spam == False)
-
-        # Now delete the second annotation.
-        delete_annotation('annot_2')
-        # todo(michael): requests on nonexisting annoataion does not work.
-        #is_spam = is_annotation_spam('annot_2')
+        # Deleting two flags
+        undo_flag_as_spam(annot1, user2, session, Action)
+        self.assertTrue(annot1.is_spam == True)
+        self.assertTrue(user1.score == THRESHOLD_SCORE_SPAM)
+        self.assertTrue(annot1.spam_flag_counter == 1)
+        undo_flag_as_spam(annot1, user3, session, Action)
+        self.assertTrue(annot1.is_spam == False)
+        self.assertTrue(user1.score == SCORE_DEFAULT)
+        self.assertTrue(annot1.spam_flag_counter == 0)
 
 
 if __name__ == '__main__':
