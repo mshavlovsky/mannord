@@ -43,6 +43,8 @@ class UserMixin(object):
 
 class AnnotationMixin(object):
 
+    __tablename__ = 'annotation'
+
     @declared_attr
     def id(cls):
         return Column(String, primary_key=True)
@@ -65,8 +67,40 @@ class AnnotationMixin(object):
     def author(cls):
         return relationship(USER_CLASS_NAME)
 
+    @classmethod
+    def get_add_annotation(cls, annotation_id, user_id, session):
+        """ Method returns an annotation record. If it does not exist,
+        it created a record in the table.
+        """
+        annot = session.query(cls).filter_by(id = annotation_id).first()
+        if annot is None:
+            annot = cls(annotation_id, user_id)
+            session.add(annot)
+            session.flush()
+        return annot
+
+    @classmethod
+    def get_annotation(cls, annotation_id, session):
+        annot = session.query(cls).filter_by(id = annotation_id).first()
+        return annot
+
+    @classmethod
+    def add_annotation(cls, annotation_id, user_id, session):
+        annot = cls(annotation_id, user_id)
+        session.add(annot)
+        session.flush()
+
+    # todo(michiael): If AnnotationMixin will be used to add tables columns to
+    # wider annotation class, then we need act in the same way as with
+    # User table.
+    def __init__(self, annotation_id, user_id):
+        self.id = annotation_id
+        self.author_id = user_id
+
 
 class ActionMixin(object):
+
+    __tablename__ = 'action'
 
     # Id is an integer from range 1, 2, 3 ... .
     @declared_attr
