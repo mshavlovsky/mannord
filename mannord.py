@@ -13,104 +13,104 @@ def bind_engine(engine, session, base, should_create=True):
         base.metadata.create_all(engine)
 
 
-def flag_as_spam(annot, user, timestamp, session, ActionClass):
-    """Flag an annotation as a spam.
+def flag_as_spam(item, user, timestamp, session, ActionClass):
+    """Flag an item as a spam.
     The method returns:
             1 on success
-            0 when annotation was already flagged as spam by the user
+            0 when the item was already flagged as spam by the user
     Arguments:
-        - annot is an object of a class which inherited from AnnotationMixin
+        - item is an object of a class which inherited from ItemMixin
         - user is an object of a class which inherited from UserMixin
         - timestamp is an object of datetime.datetime
         - session is a session object
         - ActionClass is a class which ingereted from ActionMixin
     """
-    # Check whether the annotation was flagged as a spam by the user or not.
-    action = ActionClass.get_action(annot.id, user.id, ACTION_FLAG_SPAM,
+    # Check whether the item was flagged as a spam by the user or not.
+    action = ActionClass.get_action(item.id, user.email, ACTION_FLAG_SPAM,
                                     session)
     if action is not None:
-        # The user has already flagged the annotation as spam. Nothing to do.
+        # The user has already flagged the item as spam. Nothing to do.
         return 0
 
-    # Okay, the user flagged the annotation as spam the first time.
+    # Okay, the user flagged the item as spam the first time.
     # Add a record about the action to the DB.
-    ActionClass.add_action(annot.id, user.id, ACTION_FLAG_SPAM, user.score,
+    ActionClass.add_action(item.id, user.email, ACTION_FLAG_SPAM, user.score,
                       timestamp, session)
     # Increases spam counter.
-    annot.spam_flag_counter = annot.spam_flag_counter + 1
+    item.spam_flag_counter = item.spam_flag_counter + 1
     session.flush()
-    # If the annotation is already spam then there is nothing to do.
-    if annot.is_spam:
+    # If the item is already spam then there is nothing to do.
+    if item.is_spam:
         return 1
     # Main spam updete logic.
-    flag_spam_update_logic(annot, session)
+    flag_spam_update_logic(item, session)
     session.flush()
 
 
-def flag_spam_update_logic(annot, session):
-    # If we have enough evidence, mark the annotation as spam
+def flag_spam_update_logic(item, session):
+    # If we have enough evidence, mark the item as spam
     # and the author as spammer.
-    author = annot.author
-    # If an annotation has two or more spam flags then we mark it as spam.
-    # If an annotation has only one spam flag and an author has low score, then
-    # we mark the annotation as spam.
-    if annot.spam_flag_counter == 1:
-        # The annotation is probably spam, so make it's weigh smaller
+    author = item.author
+    # If an item has two or more spam flags then we mark it as spam.
+    # If an item has only one spam flag and an author has low score, then
+    # we mark the item as spam.
+    if item.spam_flag_counter == 1:
+        # The item is probably spam, so make it's weigh smaller
         # then default.
-        annot.score = THRESHOLD_SCORE_SPAM
-        # If the author of the annotation has low score then the annotation is
+        item.score = THRESHOLD_SCORE_SPAM
+        # If the author of the item has low score then the item is
         # spam.
-        if annot.author.score <= THRESHOLD_SCORE_SPAM:
-            # The annotation is spam !!!
-            annot.score = 0
-            annot.is_spam = True
+        if item.author.score <= THRESHOLD_SCORE_SPAM:
+            # The item is spam !!!
+            item.score = 0
+            item.is_spam = True
             author.score = 0
             author.is_spammer = True
-    elif annot.spam_flag_counter > 1:
-        # The annotation is spam !!!
-        annot.score = 0
-        annot.is_spam = True
+    elif item.spam_flag_counter > 1:
+        # The item is spam !!!
+        item.score = 0
+        item.is_spam = True
         author.score = 0
         author.is_spammer = True
     session.flush()
 
 
-def undo_flag_as_spam(annot, user, session, ActionClass):
-    """ Returns 0 if the user has not flagged the annotation as spam.
+def undo_flag_as_spam(item, user, session, ActionClass):
+    """ Returns 0 if the user has not flagged the item as spam.
         Returns 1 in case of success.
     """
     # todo(michael): note that undo logic in presence of votes is more complex
-    action = ActionClass.get_action(annot.id, user.id, ACTION_FLAG_SPAM,
+    action = ActionClass.get_action(item.id, user.email, ACTION_FLAG_SPAM,
                                     session)
     if action is None:
         # There is nothing to do
         return 0
     # Deletes the action from the DB.
     session.delete(action)
-    # Decrease spam counter on the annotation
-    annot.spam_flag_counter = annot.spam_flag_counter - 1
+    # Decrease spam counter on the item
+    item.spam_flag_counter = item.spam_flag_counter - 1
     session.flush()
-    if not annot.is_spam:
-        # The annotation was not spam, so nothing to do.
+    if not item.is_spam:
+        # The item was not spam, so nothing to do.
         return 1
-    # Checks whether we need unmark the annotation as spam
+    # Checks whether we need unmark the item as spam
     # and the author as spammer.
-    if annot.spam_flag_counter == 0:
-        # The annotation does not have any spam flags.
-        annot.score = SCORE_DEFAULT
-        annot.is_spam = False
+    if item.spam_flag_counter == 0:
+        # The item does not have any spam flags.
+        item.score = SCORE_DEFAULT
+        item.is_spam = False
 
-    # If the author does not have any other spam annotations then
+    # If the author does not have any other spam items then
     # mark him/her as not spammer.
-    spam_annot_list = session.query(annot.__class__).filter(
-                        and_(annot.__class__.author_id == annot.author_id,
-                             annot.__class__.is_spam == True)).all()
-    author = annot.author
-    if len(spam_annot_list) == 0:
-        # Okay the author does not have any spamm annotations.
+    spam_item_list = session.query(item.__class__).filter(
+                        and_(item.__class__.author_email == item.author_email,
+                             item.__class__.is_spam == True)).all()
+    author = item.author
+    if len(spam_item_list) == 0:
+        # Okay the author does not have any spamm items.
         author.is_spammer = False
         author.score = SCORE_DEFAULT
-    elif len(spam_annot_list) == 1:
+    elif len(spam_item_list) == 1:
         # Well, the author probably a spammer, make his score on threshold level
         author.is_spammer = False
         author.score = THRESHOLD_SCORE_SPAM

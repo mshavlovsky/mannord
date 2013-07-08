@@ -14,21 +14,18 @@ class User(Base, UserMixin):
 
     __tablename__ = 'user'
 
-    def __init__(self, user_id):
-        self.id = user_id
+    def __init__(self, user_email):
+        self.email = user_email
 
 
-class Annotation(Base, AnnotationMixin):
+class Annotation(Base, ItemMixin):
 
-    __tablename__ = 'annotation'
 
-    def __init__(self, annotation_id, user_id):
+    def __init__(self, annotation_id, user_email):
         self.id = annotation_id
-        self.author_id = user_id
+        self.author_email = user_email
 
 class Action(ActionMixin, Base):
-
-    __tablename__ = 'action'
 
     def __init__(self, annotation_id, user_id, action_type, value, timestamp):
         super(Action, self).__init__(annotation_id, user_id,

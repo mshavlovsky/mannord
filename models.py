@@ -10,10 +10,12 @@ from sqlalchemy.ext.declarative import declared_attr
 # it makes sence to move constants into a config file.
 
 # Constants
-USER_TABLE_ID_FIELD = 'user.id'
+USER_TABLE_ID_FIELD = 'user.email'
 USER_CLASS_NAME = 'User'
-ANNOTATION_TABLE_ID_FIELD = 'annotation.id'
-ANNOTATION_CLASS_NAME = 'Annotation'
+ITEM_TABLE_ID_FIELD = 'annotation.id'
+ITEM_CLASS_NAME = 'Annotation'
+ITEM_TABLE_NAME = 'annotation'
+ACTION_TABLE_NAME = 'action'
 
 ACTION_UPVOTE = 'upvote'
 ACTION_DOWNVOTE = 'downvote'
@@ -26,41 +28,72 @@ SCORE_DEFAULT = 0.5
 class UserMixin(object):
 
     @declared_attr
-    def id(cls):
+    def email(cls):
         return Column(String, primary_key=True)
 
-    is_spammer = Column(Boolean, default=False)
+    @declared_attr
+    def is_spammer(cls):
+        return Column(Boolean, default=False)
+
     # score is "internal" reputation and it is a real value between 0 and 1,
     # We trust 100% to a user with a score 1 and we don't trust to a user with
     # score 0.
-    score = Column(Float, default=0.5)
+    @declared_attr
+    def score(cls):
+        return Column(Float, default=0.5)
+
     # Parameters of a score distribution.
-    score_distr_param_a = Column(Float, default=0)
-    score_distr_param_b = Column(Float, default=0)
+    @declared_attr
+    def score_distr_param_a(cls):
+        return Column(Float, default=0)
+
+    @declared_attr
+    def score_distr_param_b(cls):
+        return Column(Float, default=0)
+
     # Reputation of a user. This value is exposed to users.
-    reputation = Column(Float, default=0)
+    @declared_attr
+    def reputation(cls):
+        return Column(Float, default=0)
 
 
-class AnnotationMixin(object):
+class ItemMixin(object):
+    """ Item is an object like annotation, post, etc. Moderation actions
+    are perfored on items.
+    """
 
-    __tablename__ = 'annotation'
+    __tablename__ = ITEM_TABLE_NAME
 
     @declared_attr
     def id(cls):
         return Column(String, primary_key=True)
 
-    is_spam = Column(Boolean, default=False)
-    spam_flag_counter = Column(Integer, default=0)
-    # Score of an annotation is between 0 and 1. It is the annotation's weight.
-    # The annotation is more important if it has higher score.
-    score = Column(Float, default=0.5)
-    # Parameters of a score distribution.
-    score_distr_param_a = Column(Float, default=0)
-    score_distr_param_b = Column(Float, default=0)
-
-    # An id of the author.
     @declared_attr
-    def author_id(cls):
+    def is_spam(cls):
+        return Column(Boolean, default=False)
+
+    @declared_attr
+    def spam_flag_counter(cls):
+        return Column(Integer, default=0)
+
+    # Score of an item is between 0 and 1. It is the items's weight.
+    # The item is more important if it has higher score.
+    @declared_attr
+    def score(cls):
+        return Column(Float, default=0.5)
+
+    # Parameters of a score distribution.
+    @declared_attr
+    def score_distr_param_a(cls):
+        return Column(Float, default=0)
+
+    @declared_attr
+    def score_distr_param_b(cls):
+        return Column(Float, default=0)
+
+    # Authors's email
+    @declared_attr
+    def author_email(cls):
         return Column(String, ForeignKey(USER_TABLE_ID_FIELD))
 
     @declared_attr
@@ -68,39 +101,39 @@ class AnnotationMixin(object):
         return relationship(USER_CLASS_NAME)
 
     @classmethod
-    def get_add_annotation(cls, annotation_id, user_id, session):
-        """ Method returns an annotation record. If it does not exist,
+    def get_add_item(cls, item_id, user_id, session):
+        """ Method returns an item record. If it does not exist,
         it created a record in the table.
         """
-        annot = session.query(cls).filter_by(id = annotation_id).first()
+        annot = session.query(cls).filter_by(id = item_id).first()
         if annot is None:
-            annot = cls(annotation_id, user_id)
+            annot = cls(item_id, user_id)
             session.add(annot)
             session.flush()
         return annot
 
     @classmethod
-    def get_annotation(cls, annotation_id, session):
-        annot = session.query(cls).filter_by(id = annotation_id).first()
+    def get_item(cls, item_id, session):
+        annot = session.query(cls).filter_by(id = item_id).first()
         return annot
 
     @classmethod
-    def add_annotation(cls, annotation_id, user_id, session):
-        annot = cls(annotation_id, user_id)
+    def add_item(cls, item_id, user_id, session):
+        annot = cls(item_id, user_id)
         session.add(annot)
         session.flush()
 
-    # todo(michiael): If AnnotationMixin will be used to add tables columns to
-    # wider annotation class, then we need act in the same way as with
+    # todo(michiael): If itemMixin will be used to add tables columns to
+    # wider item class, then we need act in the same way as with
     # User table.
-    def __init__(self, annotation_id, user_id):
-        self.id = annotation_id
+    def __init__(self, item_id, user_id):
+        self.id = item_id
         self.author_id = user_id
 
 
 class ActionMixin(object):
 
-    __tablename__ = 'action'
+    __tablename__ = ACTION_TABLE_NAME
 
     # Id is an integer from range 1, 2, 3 ... .
     @declared_attr
@@ -117,38 +150,46 @@ class ActionMixin(object):
     def user(cls):
         return relationship(USER_CLASS_NAME)
 
-    # annotation_id is an id of an annotation on which the action was performed.
+    # item_id is an id of an item on which the action was performed.
     @declared_attr
-    def annotation_id(cls):
-        return Column(String, ForeignKey(ANNOTATION_TABLE_ID_FIELD))
+    def item_id(cls):
+        return Column(String, ForeignKey(ITEM_TABLE_ID_FIELD))
 
     @declared_attr
-    def annotation(cls):
-        return relationship(ANNOTATION_CLASS_NAME)
+    def item(cls):
+        return relationship(ITEM_CLASS_NAME)
 
     # Action type: upvote, downvote, flag spam ... .
-    type = Column(String)
-    value = Column(Float)
-    timestamp = Column(DateTime)
+    @declared_attr
+    def type (cls):
+        return Column(String)
+
+    @declared_attr
+    def value(cls):
+        return Column(Float)
+
+    @declared_attr
+    def timestamp(cls):
+        return Column(DateTime)
 
     @classmethod
-    def get_action(cls, annotation_id, user_id, action_type, session):
+    def get_action(cls, item_id, user_id, action_type, session):
         action = session.query(cls).filter(and_(cls.user_id == user_id,
-                                    cls.annotation_id == annotation_id,
+                                    cls.item_id == item_id,
                                     cls.type == action_type)).first()
         return action
 
     @classmethod
-    def add_action(cls, annotation_id, user_id, action_type, value,
+    def add_action(cls, item_id, user_id, action_type, value,
                    timestamp, session):
-        action = cls(annotation_id, user_id, action_type, value, timestamp)
+        action = cls(item_id, user_id, action_type, value, timestamp)
         session.add(action)
         session.flush()
 
     # todo(michael): I assume that a class which inherits this mixin
     # will call next constructor.
-    def __init__(self, annotation_id, user_id, action_type, value, timestamp):
-        self.annotation_id = annotation_id
+    def __init__(self, item_id, user_id, action_type, value, timestamp):
+        self.item_id = item_id
         self.user_id = user_id
         self.type = action_type
         self.value = value
