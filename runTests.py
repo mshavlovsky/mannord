@@ -14,16 +14,16 @@ class User(Base, UserMixin):
 
     __tablename__ = 'user'
 
-    def __init__(self, user_email):
-        self.email = user_email
+    def __init__(self):
+        pass
 
 
-class Annotation(Base, ItemMixin):
+class ModeratedAnnotation(Base, ItemMixin):
 
-
-    def __init__(self, annotation_id, user_email):
+    def __init__(self, annotation_id, user_id):
         self.id = annotation_id
-        self.author_email = user_email
+        self.author_id = user_id
+
 
 class Action(ActionMixin, Base):
 
@@ -42,13 +42,14 @@ class TestSpamFlag(unittest.TestCase):
         session = Session()
 
         # Create users and annotations
-        user1 = User('user1')
-        user2 = User('user2')
-        user3 = User('user3')
-        annot1 = Annotation('annot1', 'user1')
+        user1 = User()
+        user2 = User()
+        user3 = User()
         session.add(user1)
         session.add(user2)
         session.add(user3)
+        session.flush()
+        annot1 = ModeratedAnnotation('annot1', user1.id)
         session.add(annot1)
         session.commit()
 

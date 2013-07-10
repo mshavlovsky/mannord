@@ -10,10 +10,10 @@ from sqlalchemy.ext.declarative import declared_attr
 # it makes sence to move constants into a config file.
 
 # Constants
-USER_TABLE_ID_FIELD = 'user.email'
+USER_TABLE_ID_FIELD = 'user.id'
 USER_CLASS_NAME = 'User'
 ITEM_TABLE_ID_FIELD = 'annotation.id'
-ITEM_CLASS_NAME = 'Annotation'
+ITEM_CLASS_NAME = 'ModeratedAnnotation'
 ITEM_TABLE_NAME = 'annotation'
 ACTION_TABLE_NAME = 'action'
 
@@ -28,8 +28,8 @@ SCORE_DEFAULT = 0.5
 class UserMixin(object):
 
     @declared_attr
-    def email(cls):
-        return Column(String, primary_key=True)
+    def id(cls):
+        return Column(Integer, autoincrement=True, primary_key=True)
 
     @declared_attr
     def is_spammer(cls):
@@ -91,10 +91,10 @@ class ItemMixin(object):
     def score_distr_param_b(cls):
         return Column(Float, default=0)
 
-    # Authors's email
+    # Authors's id
     @declared_attr
-    def author_email(cls):
-        return Column(String, ForeignKey(USER_TABLE_ID_FIELD))
+    def author_id(cls):
+        return Column(Integer, ForeignKey(USER_TABLE_ID_FIELD))
 
     @declared_attr
     def author(cls):
@@ -123,7 +123,7 @@ class ItemMixin(object):
         session.add(annot)
         session.flush()
 
-    # todo(michiael): If itemMixin will be used to add tables columns to
+    # todo(michiael): If ItemMixin will be used to add tables columns to
     # wider item class, then we need act in the same way as with
     # User table.
     def __init__(self, item_id, user_id):
@@ -144,7 +144,7 @@ class ActionMixin(object):
     # user_id is an id of an author who did the action.
     @declared_attr
     def user_id(cls):
-        return Column(String, ForeignKey(USER_TABLE_ID_FIELD))
+        return Column(Integer, ForeignKey(USER_TABLE_ID_FIELD))
 
     @declared_attr
     def user(cls):

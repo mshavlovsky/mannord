@@ -26,7 +26,7 @@ def flag_as_spam(item, user, timestamp, session, ActionClass):
         - ActionClass is a class which ingereted from ActionMixin
     """
     # Check whether the item was flagged as a spam by the user or not.
-    action = ActionClass.get_action(item.id, user.email, ACTION_FLAG_SPAM,
+    action = ActionClass.get_action(item.id, user.id, ACTION_FLAG_SPAM,
                                     session)
     if action is not None:
         # The user has already flagged the item as spam. Nothing to do.
@@ -34,7 +34,7 @@ def flag_as_spam(item, user, timestamp, session, ActionClass):
 
     # Okay, the user flagged the item as spam the first time.
     # Add a record about the action to the DB.
-    ActionClass.add_action(item.id, user.email, ACTION_FLAG_SPAM, user.score,
+    ActionClass.add_action(item.id, user.id, ACTION_FLAG_SPAM, user.score,
                       timestamp, session)
     # Increases spam counter.
     item.spam_flag_counter = item.spam_flag_counter + 1
@@ -80,7 +80,7 @@ def undo_flag_as_spam(item, user, session, ActionClass):
         Returns 1 in case of success.
     """
     # todo(michael): note that undo logic in presence of votes is more complex
-    action = ActionClass.get_action(item.id, user.email, ACTION_FLAG_SPAM,
+    action = ActionClass.get_action(item.id, user.id, ACTION_FLAG_SPAM,
                                     session)
     if action is None:
         # There is nothing to do
@@ -103,7 +103,7 @@ def undo_flag_as_spam(item, user, session, ActionClass):
     # If the author does not have any other spam items then
     # mark him/her as not spammer.
     spam_item_list = session.query(item.__class__).filter(
-                        and_(item.__class__.author_email == item.author_email,
+                        and_(item.__class__.author_id == item.author_id,
                              item.__class__.is_spam == True)).all()
     author = item.author
     if len(spam_item_list) == 0:
