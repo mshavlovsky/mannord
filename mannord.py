@@ -1,6 +1,9 @@
 from sqlalchemy import create_engine, and_
 from datetime import datetime
-from models import *
+from models import (ActionMixin, UserMixin, ItemMixin,
+                    ACTION_FLAG_SPAM, ACTION_UPVOTE,
+                    ACTION_DOWNVOTE, THRESHOLD_SCORE_SPAM,
+                    SCORE_DEFAULT)
 
 
 # todo(michael): ahh, I don't like to pass ActionClass to each function!
@@ -13,7 +16,14 @@ def bind_engine(engine, session, base, should_create=True):
         base.metadata.create_all(engine)
 
 
-def flag_as_spam(item, user, timestamp, session, ActionClass):
+def bootstrap(base,engine):
+    class Action(ActionMixin, base):
+        pass
+    base.metadata.create_all(engine)
+    ActionMixin.cls = Action
+
+
+def flag_as_spam(item, user, timestamp, session):
     """Flag an item as a spam.
     The method returns:
             1 on success
@@ -25,6 +35,10 @@ def flag_as_spam(item, user, timestamp, session, ActionClass):
         - session is a session object
         - ActionClass is a class which ingereted from ActionMixin
     """
+    if ActionMixin.cls is None:
+        raise Exception("You forgot to bootstrap the mannord!")
+    ActionClass = ActionMixin.cls
+
     # Check whether the item was flagged as a spam by the user or not.
     action = ActionClass.get_action(item.id, user.id, ACTION_FLAG_SPAM,
                                     session)
@@ -75,10 +89,14 @@ def flag_spam_update_logic(item, session):
     session.flush()
 
 
-def undo_flag_as_spam(item, user, session, ActionClass):
+def undo_flag_as_spam(item, user, session):
     """ Returns 0 if the user has not flagged the item as spam.
         Returns 1 in case of success.
     """
+    if ActionMixin.cls is None:
+        raise Exception("You forgot to bootstrap the mannord!")
+    ActionClass = ActionMixin.cls
+
     # todo(michael): note that undo logic in presence of votes is more complex
     action = ActionClass.get_action(item.id, user.id, ACTION_FLAG_SPAM,
                                     session)

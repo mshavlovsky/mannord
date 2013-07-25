@@ -25,11 +25,11 @@ class ModeratedAnnotation(Base, ItemMixin):
         self.author_id = user_id
 
 
-class Action(ActionMixin, Base):
-
-    def __init__(self, annotation_id, user_id, action_type, value, timestamp):
-        super(Action, self).__init__(annotation_id, user_id,
-                                     action_type, value, timestamp)
+#class Action(ActionMixin, Base):
+#
+#    def __init__(self, annotation_id, user_id, action_type, value, timestamp):
+#        super(Action, self).__init__(annotation_id, user_id,
+#                                     action_type, value, timestamp)
 
 
 
@@ -39,7 +39,9 @@ class TestSpamFlag(unittest.TestCase):
         engine = create_engine('sqlite:///:memory:')
         Session = sessionmaker()
         bind_engine(engine, Session, Base)
+        bootstrap(Base, engine)
         session = Session()
+
 
         # Create users and annotations
         user1 = User()
@@ -54,21 +56,21 @@ class TestSpamFlag(unittest.TestCase):
         session.commit()
 
         # Adding two flags
-        flag_as_spam(annot1, user2, datetime.utcnow(), session, Action)
+        flag_as_spam(annot1, user2, datetime.utcnow(), session)
         self.assertTrue(annot1.spam_flag_counter == 1)
         self.assertTrue(annot1.is_spam == False)
         self.assertTrue(annot1.score == THRESHOLD_SCORE_SPAM)
-        flag_as_spam(annot1, user3, datetime.utcnow(), session, Action)
+        flag_as_spam(annot1, user3, datetime.utcnow(), session)
         self.assertTrue(annot1.score == 0)
         self.assertTrue(annot1.is_spam == True)
         self.assertTrue(annot1.spam_flag_counter == 2)
 
         # Deleting two flags
-        undo_flag_as_spam(annot1, user2, session, Action)
+        undo_flag_as_spam(annot1, user2, session)
         self.assertTrue(annot1.is_spam == True)
         self.assertTrue(user1.score == THRESHOLD_SCORE_SPAM)
         self.assertTrue(annot1.spam_flag_counter == 1)
-        undo_flag_as_spam(annot1, user3, session, Action)
+        undo_flag_as_spam(annot1, user3, session)
         self.assertTrue(annot1.is_spam == False)
         self.assertTrue(user1.score == SCORE_DEFAULT)
         self.assertTrue(annot1.spam_flag_counter == 0)

@@ -134,6 +134,7 @@ class ItemMixin(object):
 class ActionMixin(object):
 
     __tablename__ = ACTION_TABLE_NAME
+    cls = None
 
     # Id is an integer from range 1, 2, 3 ... .
     @declared_attr
