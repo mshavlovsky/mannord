@@ -57,52 +57,60 @@ class Graph(object):
         self.normaliz = 1
 
 
-def _propagate_from_users(self):
-    for it in self.items:
-        it.msgs = []
+    def _propagate_from_users(self):
+        for it in self.items:
+            it.msgs = []
 
-    for u in self.users:
-        u.reliability = u.base_reliability
-        # Computes user unnormalized reliability
-        for msg in u.msgs:
-            u.reliability += msg.value * u.answers[msg.source_id]
-        # Computes list of values to obtain normalization coefficient later.
-        reliab_list = []
-        for msg in u.msgs:
-            val = u.reliability - msg.value * u.answers[msg.source_id]
-            reliab_list.append(val)
-    # Computes normalization coefficient
-    self.normaliz = np.sum(np.array(reliab_list) ** 2)
-    self.normaliz /= float(len(reliab_list))
-    self.normaliz = self.normaliz ** 0.5
-    # Okay, now we send messages to items and compute user reliability
-    for u in self.users:
-        # Sends messages to items.
-        for msg in u.msgs:
-            val = u.reliability - msg.value * u.answers[msg.source_id]
-            val /= self.normaliz
-            it = self.items_dict[msg.source_id]
-            it.msgs.append(Msg(u.id, val))
-        # Computes normalized reliability
-        u.reliability /= self.normaliz
+        for u in self.users:
+            u.reliability = u.base_reliability
+            # Computes user unnormalized reliability
+            for msg in u.msgs:
+                u.reliability += msg.value * u.answers[msg.source_id]
+            # Computes list of values to obtain normalization coefficient later.
+            reliab_list = []
+            for msg in u.msgs:
+                val = u.reliability - msg.value * u.answers[msg.source_id]
+                reliab_list.append(val)
+        # Computes normalization coefficient
+        self.normaliz = np.sum(np.array(reliab_list) ** 2)
+        self.normaliz /= float(len(reliab_list))
+        self.normaliz = self.normaliz ** 0.5
+        # Okay, now we send messages to items and compute user reliability
+        for u in self.users:
+            # Sends messages to items.
+            for msg in u.msgs:
+                val = u.reliability - msg.value * u.answers[msg.source_id]
+                val /= self.normaliz
+                it = self.items_dict[msg.source_id]
+                it.msgs.append(Msg(u.id, val))
+            # Computes normalized reliability
+            u.reliability /= self.normaliz
 
 
-def _propagate_from_items(self):
-    for u in self.users:
-        u.msgs = []
+    def _propagate_from_items(self):
+        for u in self.users:
+            u.msgs = []
 
-    for it in self.items:
-        # todo(michael): Think through whether we need base weigh for
-        # annotations in the same way we have base reliability.
-        # todo(michael: Another point is that, after user's base reliability
-        # reaches enough threshold, we want to cap it so it
-        # would not screw (make very small) other values after normalization.
-        it.weight = 0
-        for msg in it.msgs:
-            u = self.users_dict[msg.source_id]
-            it.weight += msg.value * u.answers[it.id]
-        # Sends messages to users.
-        for msg in it.msgs:
-            u = self.users_dict[msg.source_id]
-            val = it.weight - msg.value * u.answers[it.id]
-            u.msgs.append(Msg(it.id, val))
+        for it in self.items:
+            # todo(michael): Think through whether we need base weigh for
+            # annotations in the same way we have base reliability.
+            # todo(michael: Another point is that, after user's base reliability
+            # reaches enough threshold, we want to cap it so it
+            # would not screw (make very small) other values after normalization.
+            it.weight = 0
+            for msg in it.msgs:
+                u = self.users_dict[msg.source_id]
+                it.weight += msg.value * u.answers[it.id]
+            # Sends messages to users.
+            for msg in it.msgs:
+                u = self.users_dict[msg.source_id]
+                val = it.weight - msg.value * u.answers[it.id]
+                u.msgs.append(Msg(it.id, val))
+
+
+    def run_full_computation(self, k_max):
+        # Sends the initial messages from users to items.
+        for it in self.items:
+            it.msg = []
+
+
