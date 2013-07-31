@@ -1,4 +1,4 @@
-# Implementation of Karger's algorithm with modifications.
+# Implementation of Karger's algorithm with some modifications.
 import numpy as np
 
 class Item(object):
@@ -54,8 +54,22 @@ class Graph(object):
         # normalization is to normalize user's reliability.
         self.normaliz = 1
 
+    @classmethod
+    def from_lists(cls, user_list, item_list):
+        """ Creates graph from list of users ans items."""
+        g = cls()
+        for u in user_list:
+            g.users.append(u)
+            g.user_dict[u.id] = u
+        for it in item_list:
+            g.items.append(it)
+            g.item_dict[it.id) = it
+        return g
+
     def add_answer(self, user_id, item_id, answer):
-        """ For testing purposes"""
+        """ Method adds answer to dictionary user.answers. If user or item
+        with give ids does not exist then the method creates it.
+        """
         u = self.user_dict.get(user_id)
         if not u:
             u = User(user_id)

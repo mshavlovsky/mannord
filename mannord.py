@@ -6,8 +6,6 @@ from models import (ActionMixin, UserMixin, ItemMixin,
                     SCORE_DEFAULT)
 
 
-# todo(michael): ahh, I don't like to pass ActionClass to each function!
-
 def bind_engine(engine, session, base, should_create=True):
     # todo(michael): do I need to bind session? I don't use anywhere.
     session.configure(bind=engine)
