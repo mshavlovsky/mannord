@@ -73,6 +73,13 @@ class ItemMixin(object):
         return Column(Boolean, default=False)
 
     @declared_attr
+    def weight_spam_k(cls):
+        """ weight_spam_k is a weight of an item wich computed in Karger's
+        algorithm. Negative weight indicates spam.
+        """
+        return Column(Float)
+
+    @declared_attr
     def spam_flag_counter(cls):
         return Column(Integer, default=0)
 
@@ -172,6 +179,10 @@ class ActionMixin(object):
     @declared_attr
     def timestamp(cls):
         return Column(DateTime)
+
+    @declared_attr
+    def participate_in_offline_spam_detection(cls):
+        return Column(Boolean, defauld=True)
 
     @classmethod
     def get_action(cls, item_id, user_id, action_type, session):
