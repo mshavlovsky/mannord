@@ -63,16 +63,17 @@ class Graph(object):
             g.user_dict[u.id] = u
         for it in item_list:
             g.items.append(it)
-            g.item_dict[it.id) = it
+            g.item_dict[it.id] = it
         return g
 
-    def add_answer(self, user_id, item_id, answer):
+    def add_answer(self, user_id, item_id, answer, base_reliability=0):
         """ Method adds answer to dictionary user.answers. If user or item
         with give ids does not exist then the method creates it.
         """
         u = self.user_dict.get(user_id)
         if not u:
             u = User(user_id)
+            u.base_reliability = base_reliability
             self.users.append(u)
             self.user_dict[user_id] = u
         it = self.item_dict.get(item_id)
@@ -148,7 +149,7 @@ class Graph(object):
                 it.weight += msg.value * u.answers[it.id]
 
 
-    def run_full_computation(self, k_max):
+    def compute_answers(self, k_max):
         # Sends the initial messages from users to items.
         for it in self.items:
             it.msgs = []

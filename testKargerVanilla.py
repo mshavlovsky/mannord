@@ -63,5 +63,33 @@ class TestKargerVanilla(unittest.TestCase):
         self.assertTrue(u1.reliability > 0)
         self.assertTrue(u5.reliability < 0)
 
+    #todo(michael): this function is temporary
+    def test_temp(self):
+        """ An example when a user have lots of agreement can significantly
+        overweigh new user."""
+        g = gk.Graph()
+        g.add_answer('u1', 'it1', 1)
+        g.add_answer('u1', 'it2', 1)
+
+        g.add_answer('u2', 'it1', 1)
+        g.add_answer('u2', 'it2', 1)
+
+        for i in xrange(4, 100, 1):
+            g.add_answer('u2', 'it%s' % i, 1)
+
+        for i in xrange(4, 100, 1):
+            g.add_answer('u3', 'it%s' % i, 1)
+
+        g.run_full_computation(100)
+        u1 = g.get_user('u1')
+        u2 = g.get_user('u2')
+        it1 = g.get_item('it1')
+        it2 = g.get_item('it2')
+        print
+        print u1.reliability
+        print u2.reliability
+        print it1.weight
+        print it2.weight
+        print g.normaliz
 if __name__ == '__main__':
     unittest.main()

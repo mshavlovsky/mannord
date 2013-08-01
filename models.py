@@ -20,6 +20,7 @@ ACTION_TABLE_NAME = 'action'
 ACTION_UPVOTE = 'upvote'
 ACTION_DOWNVOTE = 'downvote'
 ACTION_FLAG_SPAM = 'flag_spam'
+ACTION_FLAG_HAM = 'flag_ham'
 
 THRESHOLD_SCORE_SPAM = 0.1
 SCORE_DEFAULT = 0.5
@@ -56,6 +57,17 @@ class UserMixin(object):
     def reputation(cls):
         return Column(Float, default=0)
 
+    @declared_attr
+    def base_reliability_for_karma_user(cls):
+        """ This field is a base reliability for a karma user ("null" user) who
+        always votes positively for the user's annotation."""
+        return Column(Float, default=0)
+
+    @declared_attr
+    def base_reliability_for_spam_detection(cls):
+        """ This field is a base raliability of a user for spam detecting task.
+        """
+        return Column(Float, default=0)
 
 class ItemMixin(object):
     """ Item is an object like annotation, post, etc. Moderation actions
@@ -71,13 +83,6 @@ class ItemMixin(object):
     @declared_attr
     def is_spam(cls):
         return Column(Boolean, default=False)
-
-    @declared_attr
-    def weight_spam_k(cls):
-        """ weight_spam_k is a weight of an item wich computed in Karger's
-        algorithm. Negative weight indicates spam.
-        """
-        return Column(Float)
 
     @declared_attr
     def spam_flag_counter(cls):
@@ -106,6 +111,28 @@ class ItemMixin(object):
     @declared_attr
     def author(cls):
         return relationship(USER_CLASS_NAME)
+
+    @declared_attr
+    def weight_spam_k(cls):
+        """ weight_spam_k is a weight of an item wich computed in Karger's
+        algorithm. Negative weight indicates spam.
+        """
+        return Column(Float)
+
+    @declared_attr
+    def participate_offline_spam_detection(cls):
+        return Column(Boolean, default=True)
+
+    @declared_attr
+    def mark_for_mm(cls):
+        """Mark the item fot metamoderation."""
+        return Column(Boolean, default=False)
+
+    @classmethod
+    def get_items_offline_spam_detection(cls, session):
+        items = session.query(cls).filer(
+                     cls.participate_offline_spam_detection == True).all()
+        return items
 
     @classmethod
     def get_add_item(cls, item_id, user_id, session):
@@ -181,7 +208,14 @@ class ActionMixin(object):
         return Column(DateTime)
 
     @declared_attr
-    def participate_in_offline_spam_detection(cls):
+    def mark_for_mm(cls):
+        """Mark the action fot metamoderation."""
+        return Column(Boolean, default=False)
+
+    @declared_attr
+    def participate_offline_spam_detection(cls):
+        """ If the field is true, then the action participate in offline spam
+        detection."""
         return Column(Boolean, defauld=True)
 
     @classmethod
@@ -190,6 +224,12 @@ class ActionMixin(object):
                                     cls.item_id == item_id,
                                     cls.type == action_type)).first()
         return action
+
+    @classmethod
+    def get_actions_offline_spam_detection(cls, session):
+        actions = session.query(cls).filer(
+                     cls.participate_offline_spam_detection == True).all()
+        return actions
 
     @classmethod
     def add_action(cls, item_id, user_id, action_type, value,
@@ -206,3 +246,21 @@ class ActionMixin(object):
         self.type = action_type
         self.value = value
         self.timestamp = timestamp
+
+
+class ComputationMixin(object):
+    """ After running offline computations for vandalism detection
+    using Karger's algorithm, I need to store normalization coefficient.
+    As for now, I am planning to store it in this table.
+    """
+
+    __tablename__ = "computation"
+    cls = None
+
+    @declared_attr
+    def name(cls):
+        return Column(String, primary_key=True)
+
+    @declared_attr
+    def normalization(cls):
+        return Column(Float)
