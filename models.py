@@ -36,25 +36,8 @@ class UserMixin(object):
     def is_spammer(cls):
         return Column(Boolean, default=False)
 
-    # score is "internal" reputation and it is a real value between 0 and 1,
-    # We trust 100% to a user with a score 1 and we don't trust to a user with
-    # score 0.
     @declared_attr
-    def score(cls):
-        return Column(Float, default=0.5)
-
-    # Parameters of a score distribution.
-    @declared_attr
-    def score_distr_param_a(cls):
-        return Column(Float, default=0)
-
-    @declared_attr
-    def score_distr_param_b(cls):
-        return Column(Float, default=0)
-
-    # Reputation of a user. This value is exposed to users.
-    @declared_attr
-    def reputation(cls):
+    def base_reliability(cls):
         return Column(Float, default=0)
 
     @declared_attr
@@ -65,9 +48,10 @@ class UserMixin(object):
 
     @declared_attr
     def base_reliability_for_spam_detection(cls):
-        """ This field is a base raliability of a user for spam detecting task.
+        """ This field is a base raliability of a user for spam detection task.
         """
         return Column(Float, default=0)
+
 
 class ItemMixin(object):
     """ Item is an object like annotation, post, etc. Moderation actions
@@ -80,29 +64,6 @@ class ItemMixin(object):
     def id(cls):
         return Column(String, primary_key=True)
 
-    @declared_attr
-    def is_spam(cls):
-        return Column(Boolean, default=False)
-
-    @declared_attr
-    def spam_flag_counter(cls):
-        return Column(Integer, default=0)
-
-    # Score of an item is between 0 and 1. It is the items's weight.
-    # The item is more important if it has higher score.
-    @declared_attr
-    def score(cls):
-        return Column(Float, default=0.5)
-
-    # Parameters of a score distribution.
-    @declared_attr
-    def score_distr_param_a(cls):
-        return Column(Float, default=0)
-
-    @declared_attr
-    def score_distr_param_b(cls):
-        return Column(Float, default=0)
-
     # Authors's id
     @declared_attr
     def author_id(cls):
@@ -111,6 +72,18 @@ class ItemMixin(object):
     @declared_attr
     def author(cls):
         return relationship(USER_CLASS_NAME)
+
+    @declared_attr
+    def is_spam(cls):
+        return Column(Boolean, default=False)
+
+    @declared_attr
+    def is_ham(cls):
+        return Column(Boolean, default=False)
+
+    @declared_attr
+    def spam_flag_counter(cls):
+        return Column(Integer, default=0)
 
     @declared_attr
     def weight_spam_k(cls):
@@ -124,8 +97,8 @@ class ItemMixin(object):
         return Column(Boolean, default=True)
 
     @declared_attr
-    def mark_for_mm(cls):
-        """Mark the item fot metamoderation."""
+    def marked_for_mm(cls):
+        """If the filed is true then the item is marked for metamoderation."""
         return Column(Boolean, default=False)
 
     @classmethod
@@ -198,10 +171,6 @@ class ActionMixin(object):
     @declared_attr
     def type (cls):
         return Column(String)
-
-    @declared_attr
-    def value(cls):
-        return Column(Float)
 
     @declared_attr
     def timestamp(cls):
