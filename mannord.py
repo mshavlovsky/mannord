@@ -20,7 +20,8 @@ ALGO_KARGER_THRESHOLD_DEFINITELY_SPAM =-2
 ALGO_KARGER_THRESHOLD_DEFINITELY_HAM = 10
 # Increment for base reliability, user's base reliability changes
 # by this amound every time he make an action on an spam/ham annotation.
-ALGO_KARGER_BASE_INCREMENT = 1
+ALGO_KARGER_BASE_SPAM_INCREMENT = 1
+ALGO_KARGER_BASE_SPAM_ = 1
 
 
 def bind_engine(engine, session, base, should_create=True):
@@ -31,11 +32,16 @@ def bind_engine(engine, session, base, should_create=True):
         base.metadata.create_all(engine)
 
 
-def bootstrap(base,engine):
+def bootstrap(base,engine, UserClass, ItemClass):
     class Action(ActionMixin, base):
         pass
     base.metadata.create_all(engine)
     ActionMixin.cls = Action
+    # todo(michael): passing UserClass and ItemClass is not elegant, but these
+    # classes are created outside mannord, so they should be somehow passed here
+    # Check other options.
+    UserMixin.cls = UserClass
+    ItemClass.cls = ItemClass
 
 
 def run_offline_spam_detection(algo_name):
@@ -48,7 +54,7 @@ def run_offline_spam_detection(algo_name):
     else:
         raise Exception("Unknown algorithm type")
 
-def full_spam_detection_karger(session):
+def offline_spam_detection_karger(session):
     """ The function
                 - fetches action infromation from the db
                 - given action information it runs Karger's algorithm
@@ -62,11 +68,23 @@ def full_spam_detection_karger(session):
     about the order, etc.), but premature optimization is evil!
     """
     ActionClass = ActionMixin.cls
+    ItemClass = ItemMixin.cls
     graph = gk.Graph()
     # Fetches all actions
     actions = ActionClass.get_actions_offline_spam_detection(session)
-    # todo(michael): fix next line
-    items = ItemMixin.get_items_offline_spam_detection(session)
+    items = ItemClass.get_items_offline_spam_detection(session)
+    # Adds info to the graph object.
+    _add_spam_info_to_graph_k(graph, items, actions)
+    # Runs vandalism detection!
+    graph.compute_answers(ALGO_KARGER_K_MAX)
+    # Marks spam annotations.
+    _mark_spam_items(graph, items, actions)
+    # Saves information back to the DB
+    session.flush()
+
+def _add_spam_info_to_graph_k(graph, actions, item):
+    """ Adds spam information a graph for detection using Karger's algorithm.
+    """
     # Adds flag information (graph.add_answer(...)) to the graph object.
     for act in actions:
         if act.type == ACTION_FLAG_SPAM:
@@ -82,24 +100,50 @@ def full_spam_detection_karger(session):
             # todo(michael): make sure that after flush() the action is unmarked
             act.participate_in_offline_spam_detection = False
             continue
-        # Creates karma user (old "null" user)
-        graph.add_answer(-act.user_id, act.item_id, KARMA_USER_VOTE,
-                    base_reliability = act.user.base_reliability_for_karma_user)
-    # Runs vandalism detection!
-    graph.compute_answers(ALGO_KARGER_K_MAX)
-    # Marks spam annotations.
-    # todo(michael): messy part
     for it in items:
-        item_k = graph.get_item()
-        if not item_k:
-            pass
-        if item_k and item_k.weight > ALGO_KARGER_THRESHOLD_DEFINITELY_HAM:
-            it.is_spam = False
-            it.is_ham = True
-            it.participate_offline_spam_detection = False
-            # Adds value to the base of users who provided feedback on the item
-            # todo(michael): do it
+        # Creates karma user (old "null" user)
+        graph.add_answer(-it.author.id, it.id, KARMA_USER_VOTE,
+                   base_reliability = it.author.base_reliability_for_karma_user)
 
-    # Marks annotations and actions which should not participate in further
-    # off-line computations
-    # Saves information back to the DB
+def _mark_spam_items(graph, items, actions):
+    """ Marks items as spam/ham and excludes them from future offline
+    computations if necessary.
+    """
+    for it in items:
+        it.is_spam = False
+        it.is_ham = False
+        it.participate_offline_spam_detection = True
+        # item_k represents item "it" in the algorithm, it contains spam info.
+        item_k = graph.get_item(it.id)
+        spam_weight = item_k.weight
+        # Marks spam and ham
+        if spam_weight < ALGO_KARGER_THRESHOLD_SPAM:
+            it.is_spam = True
+        if spam_weight > ALGO_KARGER_THRESHOLD_HAM:
+            it.is_spam = True
+        # Marks off items actions from offline computation
+        if (spam_weight > ALGO_KARGER_THRESHOLD_DEFINITELY_HAM or
+            spam_weight < ALGO_KARGER_THRESHOLD_DEFINITELY_SPAM):
+            it.participate_offline_spam_detection = False
+    # Some items were marked to be excluded in future offline computations,
+    # based on it we need to mark corresponding action and update base
+    # spam reliability for users who performed actions.
+    for act in actions:
+        it = act.item
+        if it.participate_offline_spam_detection == False:
+            if act.type == ACTION_FLAG_SPAM:
+                act_val = -1
+            elif act.type == ACTION_FLAG_HAM or act.type == ACTION_UPVOTE:
+                act_val = 1
+            else:
+                continue
+            if it.is_spam:
+                act.user.base_reliability_for_spam_detection += \
+                    act_val * (-ALGO_KARGER_BASE_SPAM_INCREMENT)
+                act.user.base_reliability_for_karma_user += \
+                    act_val * (-ALGO_KARGER_BASE_SPAM_INCREMENT)
+            if it.is_ham:
+                act.user.base_reliability_for_spam_detection += \
+                    val_act * ALGO_KARGER_BASE_SPAM_INCREMENT
+                act.user.base_reliability_for_karma_user += \
+                    val_act * ALGO_KARGER_BASE_SPAM_INCREMENT

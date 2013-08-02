@@ -17,7 +17,7 @@ class TestKargerVanilla(unittest.TestCase):
         g.add_answer('u3', 'it1', -1)
         g.add_answer('u3', 'it2', -1)
         # Runs main algo
-        g.run_full_computation(10)
+        g.compute_answers(10)
         u1 = g.get_user('u1')
         u2 = g.get_user('u2')
         u3 = g.get_user('u3')
@@ -51,7 +51,7 @@ class TestKargerVanilla(unittest.TestCase):
         g.add_answer('u7', 'it1', -1)
         g.add_answer('u7', 'it2', +1)
         # Runs main algo
-        g.run_full_computation(100)
+        g.compute_answers(100)
         u1 = g.get_user('u1')
         u5 = g.get_user('u5')
         u7 = g.get_user('u7')
@@ -80,7 +80,7 @@ class TestKargerVanilla(unittest.TestCase):
         for i in xrange(4, 100, 1):
             g.add_answer('u3', 'it%s' % i, 1)
 
-        g.run_full_computation(100)
+        g.compute_answers(100)
         u1 = g.get_user('u1')
         u2 = g.get_user('u2')
         it1 = g.get_item('it1')

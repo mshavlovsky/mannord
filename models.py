@@ -28,6 +28,8 @@ SCORE_DEFAULT = 0.5
 
 class UserMixin(object):
 
+    cls = None
+
     @declared_attr
     def id(cls):
         return Column(Integer, autoincrement=True, primary_key=True)
@@ -59,6 +61,7 @@ class ItemMixin(object):
     """
 
     __tablename__ = ITEM_TABLE_NAME
+    cls = None
 
     @declared_attr
     def id(cls):
