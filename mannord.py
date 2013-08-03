@@ -144,6 +144,6 @@ def _mark_spam_items(graph, items, actions):
                     act_val * (-ALGO_KARGER_BASE_SPAM_INCREMENT)
             if it.is_ham:
                 act.user.base_reliability_for_spam_detection += \
-                    val_act * ALGO_KARGER_BASE_SPAM_INCREMENT
+                    act_val * ALGO_KARGER_BASE_SPAM_INCREMENT
                 act.user.base_reliability_for_karma_user += \
-                    val_act * ALGO_KARGER_BASE_SPAM_INCREMENT
+                    act_val * ALGO_KARGER_BASE_SPAM_INCREMENT

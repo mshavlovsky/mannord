@@ -5,6 +5,19 @@ import graph_k as gk
 
 class TestKargerVanilla(unittest.TestCase):
 
+    def test_single_action(self):
+        # If there is only one user and one item then spam weight of the
+        # item is zero.
+        # (In algorithm with Karma user, one weight would give
+        # positive weight to the item).
+        g = gk.Graph()
+        g.add_answer('u1', 'it1', 1)
+        # Runs main algo
+        g.compute_answers(10)
+        u1 = g.get_user('u1')
+        it1 = g.get_item('it1')
+        self.assertTrue(it1.weight == 0)
+
     def test_2_against_1(self):
         # Creating users and items.
         g = gk.Graph()
@@ -91,5 +104,6 @@ class TestKargerVanilla(unittest.TestCase):
         print it1.weight
         print it2.weight
         print g.normaliz
+
 if __name__ == '__main__':
     unittest.main()

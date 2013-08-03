@@ -108,6 +108,10 @@ class Graph(object):
         self.normaliz = np.sum(np.array(reliab_list) ** 2)
         self.normaliz /= float(len(reliab_list))
         self.normaliz = self.normaliz ** 0.5
+        if self.normaliz == 0:
+            # If noramlization is zero then all messages have zero value!
+            # In this case we make normalization to 1.
+            self.normaliz = 1.0
         # Okay, now we send messages to items and compute user reliability
         for u in self.users:
             # Sends messages to items.
