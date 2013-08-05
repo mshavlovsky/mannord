@@ -39,7 +39,7 @@ class TestSpamFlag(unittest.TestCase):
         engine = create_engine('sqlite:///:memory:')
         Session = sessionmaker()
         bind_engine(engine, Session, Base)
-        bootstrap(Base, engine)
+        bootstrap(Base, engine, User, ModeratedAnnotation)
         session = Session()
 
 

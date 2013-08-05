@@ -1,6 +1,9 @@
 # Implementation of Karger's algorithm with some modifications.
 import numpy as np
 
+USE_ASYMPTOTIC_FUNC = True
+
+
 class Item(object):
 
     def __init__(self, item_id):
@@ -27,6 +30,9 @@ class User(object):
         # reliability is a sum over i of A_ij * x_ij, where i is item on which
         # the user provided feedback A_ij
         self.reliability = 0
+        # Raw reliability is user's reliability before applying asymptotic
+        # function or normalization. We need it to perform online update.
+        u.reliability_raw = 0
         # answers is a dictionary of user's flags/votes: it maps item id to
         # answer A by the user.
         # In terms of spam/ham: if A is positive then the item is ham and if A
@@ -34,6 +40,14 @@ class User(object):
         self.answers = {}
         # A list of messages from items.
         self.msgs = []
+
+
+def asympt_func(val):
+    # Asymptote reflects how much one user can be more 'powerfull' than another.
+    # For instance, if asymptote is 10 then a user with a high reliability has
+    # vote weight as 10 votes of default users.
+    asymptote = 10
+    return asymptote * (2/np.pi) * np.arctan(val * 1.6 / asymptote)
 
 
 class Msg(object):
@@ -112,17 +126,26 @@ class Graph(object):
             # If noramlization is zero then all messages have zero value!
             # In this case we make normalization to 1.
             self.normaliz = 1.0
+
         # Okay, now we send messages to items and compute user reliability
         for u in self.users:
             # Sends messages to items.
             for msg in u.msgs:
                 val = u.reliability - msg.value * u.answers[msg.source_id]
-                val /= self.normaliz
+                if USE_ASYMPTOTIC_FUNC:
+                    val = asympt_func(val)
+                else:
+                    val /= self.normaliz
                 it = self.item_dict[msg.source_id]
                 it.msgs.append(Msg(u.id, val))
-            # Computes normalized reliability
-            u.reliability /= self.normaliz
 
+            u.reliability_raw = u.reliability
+            if USE_ASYMPTOTIC_FUNC:
+                # Applies asymptotic function to user's reliability
+                u.reliability = asympt_func(u.reliability)
+            else:
+                # Computes normalized reliability
+                u.reliability /= self.normaliz
 
     def _propagate_from_items(self):
         for u in self.users:
@@ -142,6 +165,8 @@ class Graph(object):
             for msg in it.msgs:
                 u = self.user_dict[msg.source_id]
                 val = it.weight - msg.value * u.answers[it.id]
+                if USE_ASYMPTOTIC_FUNC:
+                    val = asympt_func(val)
                 u.msgs.append(Msg(it.id, val))
 
     def _aggregate_items(self):

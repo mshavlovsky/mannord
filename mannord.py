@@ -50,7 +50,7 @@ def run_offline_spam_detection(algo_name):
     if ActionMixin.cls is None:
         raise Exception("You forgot to bootstrap the mannord!")
     if algo_type == ALGO_NAME_KARGER:
-        run_offline_spam_detect_karger():
+        run_offline_spam_detect_karger()
     else:
         raise Exception("Unknown algorithm type")
 
