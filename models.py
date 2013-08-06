@@ -25,6 +25,10 @@ ACTION_FLAG_HAM = 'flag_ham'
 THRESHOLD_SCORE_SPAM = 0.1
 SCORE_DEFAULT = 0.5
 
+# Notes: A spam karma user always votes "not spam" on annotations
+# created by a user. Reliability of the spam karma user reflects whether user
+# is spammer or not. If it has negative reliability then the user is spammer.
+
 
 class UserMixin(object):
 
@@ -39,19 +43,27 @@ class UserMixin(object):
         return Column(Boolean, default=False)
 
     @declared_attr
-    def base_reliability(cls):
+    def base_reliab(cls):
         return Column(Float, default=0)
 
     @declared_attr
-    def base_reliability_for_karma_user(cls):
+    def base_reliab_spam_detect(cls):
+        """ This field is a base raliability of a user for spam detection task.
+        """
+        return Column(Float, default=0)
+
+    @declared_attr
+    def reliab_spam_detect(cls):
+        return Column(Float, default=0)
+
+    @declared_attr
+    def base_reliab_spam_karma_user(cls):
         """ This field is a base reliability for a karma user ("null" user) who
         always votes positively for the user's annotation."""
         return Column(Float, default=0)
 
     @declared_attr
-    def base_reliability_for_spam_detection(cls):
-        """ This field is a base raliability of a user for spam detection task.
-        """
+    def reliab_spam_karma_user(cls):
         return Column(Float, default=0)
 
 
@@ -96,7 +108,7 @@ class ItemMixin(object):
         return Column(Float)
 
     @declared_attr
-    def participate_offline_spam_detection(cls):
+    def participate_offline_spam_detect(cls):
         return Column(Boolean, default=True)
 
     @declared_attr
@@ -105,9 +117,9 @@ class ItemMixin(object):
         return Column(Boolean, default=False)
 
     @classmethod
-    def get_items_offline_spam_detection(cls, session):
+    def get_items_offline_spam_detect(cls, session):
         items = session.query(cls).filer(
-                     cls.participate_offline_spam_detection == True).all()
+                     cls.participate_offline_spam_detect == True).all()
         return items
 
     @classmethod
@@ -185,7 +197,7 @@ class ActionMixin(object):
         return Column(Boolean, default=False)
 
     @declared_attr
-    def participate_offline_spam_detection(cls):
+    def participate_offline_spam_detect(cls):
         """ If the field is true, then the action participate in offline spam
         detection."""
         return Column(Boolean, defauld=True)
@@ -198,9 +210,9 @@ class ActionMixin(object):
         return action
 
     @classmethod
-    def get_actions_offline_spam_detection(cls, session):
+    def get_actions_offline_spam_detect(cls, session):
         actions = session.query(cls).filer(
-                     cls.participate_offline_spam_detection == True).all()
+                     cls.participate_offline_spam_detect == True).all()
         return actions
 
     @classmethod
