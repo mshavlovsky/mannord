@@ -38,7 +38,6 @@ def bootstrap(base,engine, UserClass, ItemClass):
     base.metadata.create_all(engine)
     ActionMixin.cls = Action
     # todo(michael): create ItemClass here and User class can be known from
-    # 
     UserMixin.cls = UserClass
     ItemClass.cls = ItemClass
 
@@ -48,7 +47,7 @@ def run_offline_spam_detection(algo_name):
     """
     if ActionMixin.cls is None:
         raise Exception("You forgot to bootstrap the mannord!")
-    if algo_type == ALGO_NAME_KARGER:
+    if algo_name == ALGO_NAME_KARGER:
         run_offline_spam_detect_karger()
     else:
         raise Exception("Unknown algorithm type")
@@ -57,14 +56,36 @@ def run_offline_spam_detection(algo_name):
 def flag_spam(item, session, algo_name=ALGO_NAME_KARGER):
     if ActionMixin.cls is None:
         raise Exception("You forgot to bootstrap the mannord!")
-    if algo_type == ALGO_NAME_KARGER:
+    if algo_name == ALGO_NAME_KARGER:
         run_offline_spam_detect_karger()
     else:
         raise Exception("Unknown algorithm type")
-    
 
-def flag_spam_karger(item, session):
-    
+
+def flag_spam_karger(item, user, timestamp, session):
+    # Creates a record in Action table
+    act = ActionMixin.cls(item.id, user.id, ACTION_FLAG_SPAM)
+    session.add(act)
+    # If the item is known as spam/ham then we change
+    # the user's spam base reliability.
+    if not item.participate_offline_spam_detect:
+        if item.weight < 0:
+            user.base_reliab_spam_detect += ALGO_KARGER_BASE_SPAM_INCREMENT
+        else item.weight:
+            user.base_reliab_spam_detect -= ALGO_KARGER_BASE_SPAM_INCREMENT
+        # Mark action to not use in onffline spam detection.
+        act.participate_offline_spam_detect = False
+        session.flush()
+        return
+    # Okay, we are not sure enough whether the annotation is spam or not.
+    # Updating weight of the item
+    val = item.weight_spam_k
+    item.weight_spam_k -= user.reliab_spam_detect
+    # Updating user's raw/regular spam reliability.
+    user.reliab_spam_detect_raw += (-1) * gk.asympt_func(val)
+    user.reliab_spam_detect = gk.asympt_func(user.reliab_spam_detect_raw)
+    session.flush()
+
 
 
 def offline_spam_detection_karger(session):

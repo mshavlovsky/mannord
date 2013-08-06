@@ -57,6 +57,13 @@ class UserMixin(object):
         return Column(Float, default=0)
 
     @declared_attr
+    def reliab_spam_detect_raw(cls):
+        """ Raw reliability is user's reliability before applying asymptotic
+        function or normalization. We need it to perform online update.
+        """
+        return Column(Float, default=0)
+
+    @declared_attr
     def base_reliab_spam_karma_user(cls):
         """ This field is a base reliability for a karma user ("null" user) who
         always votes positively for the user's annotation."""
@@ -100,6 +107,8 @@ class ItemMixin(object):
     def spam_flag_counter(cls):
         return Column(Integer, default=0)
 
+    # todo(michael): initialise spam weight according to user's spam karma user
+    # reliability
     @declared_attr
     def weight_spam_k(cls):
         """ weight_spam_k is a weight of an item wich computed in Karger's
@@ -224,11 +233,10 @@ class ActionMixin(object):
 
     # todo(michael): I assume that a class which inherits this mixin
     # will call next constructor.
-    def __init__(self, item_id, user_id, action_type, value, timestamp):
+    def __init__(self, item_id, user_id, action_type, timestamp):
         self.item_id = item_id
         self.user_id = user_id
         self.type = action_type
-        self.value = value
         self.timestamp = timestamp
 
 

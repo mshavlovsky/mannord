@@ -46,6 +46,11 @@ def asympt_func(val):
     # Asymptote reflects how much one user can be more 'powerfull' than another.
     # For instance, if asymptote is 10 then a user with a high reliability has
     # vote weight as 10 votes of default users.
+    # Aymptotic function is applied:
+    #   - to value of message from items to users - this way we reduce effect
+    #     of one annotation in computing users reliability.
+    #   - to value of message from user to items - to reduce influence of
+    #     the user.
     asymptote = 10
     return asymptote * (2/np.pi) * np.arctan(val * 1.6 / asymptote)
 
