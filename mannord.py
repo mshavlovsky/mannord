@@ -11,7 +11,6 @@ ALGO_NAME_KARGER = 'karger'
 
 # todo(michael): tune ALGO_KARGER_* parameters
 ALGO_KARGER_K_MAX = 10
-ALGO_KARGER_KARMA_USER_VOTE = 0.5
 ALGO_KARGER_THRESHOLD_SPAM = -0.7
 ALGO_KARGER_THRESHOLD_HAM = 5
 # If weight of an item is less than ..._DEFINITELY_SPAM then annotation is

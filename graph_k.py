@@ -2,6 +2,7 @@
 import numpy as np
 
 USE_ASYMPTOTIC_FUNC = True
+ALGO_KARGER_KARMA_USER_VOTE = 0.5
 
 
 class Item(object):

@@ -2,6 +2,7 @@ from sqlalchemy import (Column, Integer, Float, String, Boolean,
                         ForeignKey, DateTime, Sequence, and_)
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.declarative import declared_attr
+import graph_k as gk
 
 
 # todo(michael): there is an issue when using foreign keys.
@@ -22,8 +23,6 @@ ACTION_DOWNVOTE = 'downvote'
 ACTION_FLAG_SPAM = 'flag_spam'
 ACTION_FLAG_HAM = 'flag_ham'
 
-THRESHOLD_SCORE_SPAM = 0.1
-SCORE_DEFAULT = 0.5
 
 # Notes: A spam karma user always votes "not spam" on annotations
 # created by a user. Reliability of the spam karma user reflects whether user
@@ -132,15 +131,13 @@ class ItemMixin(object):
         return items
 
     @classmethod
-    def get_add_item(cls, item_id, user_id, session):
+    def get_add_item(cls, item_id, user, session):
         """ Method returns an item record. If it does not exist,
         it created a record in the table.
         """
-        annot = session.query(cls).filter_by(id = item_id).first()
+        annot = cls.get_item(item_id, session)
         if annot is None:
-            annot = cls(item_id, user_id)
-            session.add(annot)
-            session.flush()
+            annot = cls.add_item(item_id, user, session)
         return annot
 
     @classmethod
@@ -149,10 +146,15 @@ class ItemMixin(object):
         return annot
 
     @classmethod
-    def add_item(cls, item_id, user_id, session):
-        annot = cls(item_id, user_id)
+    def add_item(cls, item_id, user, session):
+        annot = cls(item_id, user.id)
+        # Computes initial spam weight of the item.
+        val = user.reliab_spam_karma_user * gk.ALGO_KARGER_KARMA_USER_VOTE
+        val = gk.asympt_func(val)
+        annot.weight_spam_k = val
         session.add(annot)
         session.flush()
+        return annot
 
     # todo(michiael): If ItemMixin will be used to add tables columns to
     # wider item class, then we need act in the same way as with
