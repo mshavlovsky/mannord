@@ -1,9 +1,9 @@
 from sqlalchemy import create_engine, and_
 from datetime import datetime
 from models import (ActionMixin, UserMixin, ItemMixin,
-                    ACTION_FLAG_SPAM, ACTION_UPVOTE,
-                    ACTION_DOWNVOTE, THRESHOLD_SCORE_SPAM,
-                    SCORE_DEFAULT)
+                    ACTION_FLAG_SPAM, ACTION_FLAG_HAM,
+                    ACTION_UPVOTE, ACTION_DOWNVOTE,
+                    THRESHOLD_SCORE_SPAM, SCORE_DEFAULT)
 import graph_k as gk
 
 ALGO_NAME_KARGER = 'karger'
@@ -52,18 +52,56 @@ def run_offline_spam_detection(algo_name):
         raise Exception("Unknown algorithm type")
 
 
-def flag_spam(item, session, algo_name=ALGO_NAME_KARGER):
+def flag_spam(item, user, session, algo_name=ALGO_NAME_KARGER):
+    timestamp = datetime.utcnow()
     if ActionMixin.cls is None:
         raise Exception("You forgot to bootstrap the mannord!")
     if algo_name == ALGO_NAME_KARGER:
-        run_offline_spam_detect_karger()
+        flag_spam_karger(item, user, timestamp, session)
     else:
         raise Exception("Unknown algorithm type")
 
-
 def flag_spam_karger(item, user, timestamp, session):
+    # Check whether the annotation was flagged as spam.
+    act = ActionMixin.cls.get_action(item.id, user.id, ACTION_FLAG_SPAM)
+    if not act is None:
+        # Nothing todo.
+        return
+    # Check whether the annotation was flagged as ham.
+    act = ActionMixin.cls.get_action(item.id, user.id, ACTION_FLAG_HAM)
+    if act is None:
+        # Flag as spam first time!
+        flag_spam_karger_fresh(item, user, timestamp, session)
+    else:
+        # The item was flagged as ham.
+        # Undoes effects of ham flag.
+        undo_flag_ham_karger(item, user, session)
+        # Deletes the ham aciton.
+        session.delete(act)
+        # Flags the item as spam.
+        flag_spam_karger_fresh(item, user, timestamp, session)
+
+def undo_flag_ham_karger(item, user, session):
+    """ Undo flag ham without checking and deleting for original flag action."""
+    if item.participate_in_offline_spam_detect:
+        # The is as known as spam/ham.
+        if item.weight < 0:
+            user.base_reliab_spam_detect += ALGO_KARGER_BASE_SPAM_INCREMENT
+        else item.weight:
+            user.base_reliab_spam_detect -= ALGO_KARGER_BASE_SPAM_INCREMENT
+        return
+    # Okay, the item participates in offline spam detection.
+    # Updating weight of the item
+    val = item.weight_spam_k
+    item.weight_spam_k -= user.reliab_spam_detect
+    # Updating user's raw/regular spam reliability.
+    user.reliab_spam_detect_raw += (-1) * gk.asympt_func(val)
+    user.reliab_spam_detect = gk.asympt_func(user.reliab_spam_detect_raw)
+
+def flag_spam_karger_fresh(item, user, timestamp, session):
+    """ It is assumed that the item was not flagged spam/ham by the user."""
     # Creates a record in Action table
-    act = ActionMixin.cls(item.id, user.id, ACTION_FLAG_SPAM)
+    act = ActionMixin.cls(item.id, user.id, ACTION_FLAG_SPAM, timestamp)
     session.add(act)
     # If the item is known as spam/ham then we change
     # the user's spam base reliability.
@@ -85,6 +123,9 @@ def flag_spam_karger(item, user, timestamp, session):
     user.reliab_spam_detect = gk.asympt_func(user.reliab_spam_detect_raw)
     session.flush()
 
+def flag_ham_karger_fresh(item, user, timestamp, session):
+    """ It is assumed that the item was not flagged spam/ham by the user."""
+    pass
 
 
 def offline_spam_detection_karger(session):
