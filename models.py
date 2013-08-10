@@ -251,6 +251,21 @@ class ActionMixin(object):
     def item(cls):
         return relationship(ITEM_CLASS_NAME)
 
+    # Authors's id
+    @declared_attr
+    def action_item_id(cls):
+        """Action item  is an item which corresponds to the action.
+        For example, if an annotation is a vote with explanation then
+        the vote action has link to the annotation through action_item.
+        """
+        return Column(Integer, ForeignKey(ITEM_TABLE_ID_FIELD))
+
+    @declared_attr
+    def action_item(cls):
+        # todo(michael): there are two links to item table: item and action_item
+        # solve ambiguity in sqlalchemy
+        return relationship(ITEM_CLASS_NAME)
+
     # Action type: upvote, downvote, flag spam ... .
     @declared_attr
     def type (cls):
