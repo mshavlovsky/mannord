@@ -5,12 +5,43 @@ import numpy as np
 ALGO_DIRICHLET_KARMA_USER_VOTE = 0.5
 
 
+def compute_percentile_dirichlet(neg, pos, percentile):
+    """ Numerically computes percentile of Dirichlet distribution.
+    Percentile is between 0 and 1.
+    """
+    # alpha is a number of "Truth"
+    # beta is a number of "False"
+    alpha, beta = pos, abs(neg)
+    # Sanity check for testing purposes.
+    if alpha > 1000000 or beta > 1000000:
+        raise Exception("Alpha or Beta is too big!!!")
+    # First, numerically compute unnormalised probability mass function.
+    delta = 0.0001
+    x = np.arange(0 + delta, 1, delta)
+    y = x ** (alpha) * (1 - x) ** (beta)
+    # Integral approximation based on trapezoidal rule.
+    y1 = y[:-1]
+    y2 = y[1:]
+    integral_vec = (y2 + y1) / 2 * delta
+    integral = np.sum(integral_vec)
+    cumsum = np.cumsum(integral_vec)
+    threshold = (1 - percentile) * integral
+    idx = cumsum.searchsorted(threshold)
+    val = idx * delta
+    return val
+
+
 def get_reliability(u_n, u_p):
-    pass
+    perc = 0.8
+    mid_point = compute_percentile_dirichlet(0, 0, perc)
+    val = compute_percentile_dirichlet(u_n, u_p, perc)
+    val = max(0, val - mid_point)
+    val = (val / (1 - mid_point)) ** 2
+    return val
 
 
 def get_item_weight(c_n, c_p):
-    pass
+    return get_reliability(c_n, c_p)
 
 
 class Item(object):
@@ -184,7 +215,7 @@ class Graph(object):
         for u in self.users:
             for it_id in u.answers.iterkeys():
                 it = self.item_dict[it_id]
-                msg = Message_to_item(u.id, u.answers[it_id] * u.reliability)
+                msg = Message_to_item(u.id, u.answers[it_id])
                 it.msgs.append(msg)
         # Runs main iterations.
         for i in xrange(k_max):
