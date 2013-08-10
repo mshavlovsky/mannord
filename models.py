@@ -3,6 +3,7 @@ from sqlalchemy import (Column, Integer, Float, String, Boolean,
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.declarative import declared_attr
 import graph_k as gk
+import graph_d as gd
 
 
 # todo(michael): there is an issue when using foreign keys.
@@ -45,6 +46,7 @@ class UserMixin(object):
     def is_spammer(cls):
         return Column(Boolean, default=False)
 
+    # Fields related to spam detection using Karger's algorithm (sk_ prefix)
     @declared_attr
     def sk_base_reliab(cls):
         """ This field is a base raliability of a user for spam detection task.
@@ -64,13 +66,37 @@ class UserMixin(object):
         return Column(Float, default=0)
 
     @declared_attr
-    def sk_base_reliab_karma_user(cls):
+    def sk_karma_user_base_reliab(cls):
         """ This field is a base reliability for a karma user ("null" user) who
         always votes positively for the user's annotation."""
         return Column(Float, default=0)
 
     @declared_attr
-    def sk_reliab_karma_user(cls):
+    def sk_karma_user_reliab(cls):
+        return Column(Float, default=0)
+
+    # Fields related to spam detection using Dirichlet distribution (sd_ prefix)
+    @declared_attr
+    def sd_reliab(cls):
+        return Column(Float, default=0)
+
+    @declared_attr
+    def sd_u_n(cls):
+        return Column(Float, default=0)
+
+    @declared_attr
+    def sd_u_p(cls):
+        return Column(Float, default=0)
+
+    def sd_karma_user_reliab(cls):
+        return Column(Float, default=0)
+
+    @declared_attr
+    def sd_karma_user_u_n(cls):
+        return Column(Float, default=0)
+
+    @declared_attr
+    def sd_karma_user_u_p(cls):
         return Column(Float, default=0)
 
 
@@ -115,8 +141,12 @@ class ItemMixin(object):
     def spam_flag_counter(cls):
         return Column(Integer, default=0)
 
-    # todo(michael): initialise spam weight according to user's spam karma user
-    # reliability
+    @declared_attr
+    def marked_for_mm(cls):
+        """If the filed is true then the item is marked for metamoderation."""
+        return Column(Boolean, default=False)
+
+    # Fields related to spam detection using Karger's algorithm (sk_ prefix)
     @declared_attr
     def sk_weight(cls):
         """ weight_spam_k is a weight of an item wich computed in Karger's
@@ -128,15 +158,28 @@ class ItemMixin(object):
     def sk_frozen(cls):
         return Column(Boolean, default=False)
 
-    @declared_attr
-    def marked_for_mm(cls):
-        """If the filed is true then the item is marked for metamoderation."""
-        return Column(Boolean, default=False)
-
     @classmethod
     def sk_get_items_offline_spam_detect(cls, session):
         items = session.query(cls).filer(
                      cls.sk_frozen == False).all()
+        return items
+
+    @declared_attr
+    def sd_weight(cls):
+        """ weight_spam_k is a weight of an item wich computed in Karger's
+        algorithm. Negative weight indicates spam.
+        """
+        return Column(Float)
+
+    # Fields related to spam detection using Dirichlet distribution (sd_ prefix)
+    @declared_attr
+    def sd_frozen(cls):
+        return Column(Boolean, default=False)
+
+    @classmethod
+    def sd_get_items_offline_spam_detect(cls, session):
+        items = session.query(cls).filer(
+                     cls.sd_frozen == False).all()
         return items
 
     @classmethod
@@ -157,10 +200,14 @@ class ItemMixin(object):
     @classmethod
     def add_item(cls, item_id, user, session):
         annot = cls(item_id, user.id)
-        # Computes initial spam weight of the item.
+        # Computes initial spam weight of the item according do Karger's algo.
         val = user.sk_reliab_karma_user * gk.ALGO_KARGER_KARMA_USER_VOTE
         val = gk.asympt_func(val)
         annot.sk_weight = val
+        # Computes initial spam weight of the item according do Dirichelt
+        u_n = user.sd_karma_user_u_n
+        u_p = user.sd_karma_user_u_p
+        annot.sd_weight = gd.get_item_weight(u_n, u_p)
         session.add(annot)
         session.flush()
         return annot
@@ -218,12 +265,6 @@ class ActionMixin(object):
         """Mark the action fot metamoderation."""
         return Column(Boolean, default=False)
 
-    @declared_attr
-    def sk_frozen(cls):
-        """ If the field is true, then the action participate in offline spam
-        detection."""
-        return Column(Boolean, defauld=True)
-
     @classmethod
     def get_action(cls, item_id, user_id, action_type, session):
         action = session.query(cls).filter(and_(cls.user_id == user_id,
@@ -231,10 +272,30 @@ class ActionMixin(object):
                                     cls.type == action_type)).first()
         return action
 
+    # Fields related to spam detection using Karger's algorithm (sk_ prefix)
+    @declared_attr
+    def sk_frozen(cls):
+        """ If the field is true, then the action participate in offline spam
+        detection."""
+        return Column(Boolean, defauld=True)
+
     @classmethod
     def sk_get_actions_offline_spam_detect(cls, session):
         actions = session.query(cls).filer(
                      cls.sk_frozen == False).all()
+        return actions
+
+    # Fields related to spam detection using Dirichlet distribution (sd_ prefix)
+    @declared_attr
+    def sd_frozen(cls):
+        """ If the field is true, then the action participate in offline spam
+        detection."""
+        return Column(Boolean, defauld=True)
+
+    @classmethod
+    def sd_get_actions_offline_spam_detect(cls, session):
+        actions = session.query(cls).filer(
+                     cls.sd_frozen == False).all()
         return actions
 
     @classmethod

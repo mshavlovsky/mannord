@@ -41,7 +41,10 @@ def get_reliability(u_n, u_p):
 
 
 def get_item_weight(c_n, c_p):
-    return get_reliability(c_n, c_p)
+    perc = 0.8
+    mid_point = compute_percentile_dirichlet(0, 0, perc)
+    val = compute_percentile_dirichlet(c_n, c_p, perc)
+    return val - mid_point
 
 
 class Item(object):

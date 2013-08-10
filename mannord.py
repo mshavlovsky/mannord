@@ -221,7 +221,7 @@ def _add_spam_info_to_graph_k(graph, actions, item):
     for it in items:
         # Creates karma user (old "null" user)
         graph.add_answer(-it.author.id, it.id, KARMA_USER_VOTE,
-                   base_reliab = it.author.sk_base_reliab_karma_user)
+                   base_reliab = it.author.sk_karma_user_base_reliab)
 
 def _mark_spam_items(graph, items, actions):
     """ Marks items as spam/ham and excludes them from future offline
@@ -245,7 +245,7 @@ def _mark_spam_items(graph, items, actions):
             it.sk_frozen = True
         # Saves reliability of a spam karma user related to an author of the item
         k_user = graph.get_user(-it.author.id)
-        it.author.sk_reliab_karma_user = k_user.reliability
+        it.author.sk_karma_user_reliab = k_user.reliability
 
     # Some items were marked to be excluded in future offline computations,
     # based on it we need to mark corresponding action and update base
@@ -262,10 +262,10 @@ def _mark_spam_items(graph, items, actions):
             if it.is_spam:
                 act.user.sk_base_reliab += \
                     act_val * (-ALGO_KARGER_BASE_SPAM_INCREMENT)
-                act.user.sk_base_reliab_karma_user += \
+                act.user.sk_karma_user_base_reliab += \
                     act_val * (-ALGO_KARGER_BASE_SPAM_INCREMENT)
             if it.is_ham:
                 act.user.sk_base_reliab += \
                     act_val * ALGO_KARGER_BASE_SPAM_INCREMENT
-                act.user.sk_base_reliab_karma_user += \
+                act.user.sk_karma_user_base_reliab += \
                     act_val * ALGO_KARGER_BASE_SPAM_INCREMENT
