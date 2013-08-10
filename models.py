@@ -23,6 +23,10 @@ ACTION_DOWNVOTE = 'downvote'
 ACTION_FLAG_SPAM = 'flag_spam'
 ACTION_FLAG_HAM = 'flag_ham'
 
+# Explanation of prefixes of column names.
+#   - sk - a field related to spam detection using karger's algorithm
+#   - sd - a filed related to spam detection based on Dirichlet distribution
+
 
 # Notes: A spam karma user always votes "not spam" on annotations
 # created by a user. Reliability of the spam karma user reflects whether user
@@ -42,34 +46,31 @@ class UserMixin(object):
         return Column(Boolean, default=False)
 
     @declared_attr
-    def base_reliab(cls):
-        return Column(Float, default=0)
-
-    @declared_attr
-    def base_reliab_spam_detect(cls):
+    def sk_base_reliab(cls):
         """ This field is a base raliability of a user for spam detection task.
         """
         return Column(Float, default=0)
 
     @declared_attr
-    def reliab_spam_detect(cls):
+    def sk_reliab(cls):
+        """ Spam detection reliability"""
         return Column(Float, default=0)
 
     @declared_attr
-    def reliab_spam_detect_raw(cls):
+    def sk_reliab_raw(cls):
         """ Raw reliability is user's reliability before applying asymptotic
         function or normalization. We need it to perform online update.
         """
         return Column(Float, default=0)
 
     @declared_attr
-    def base_reliab_spam_karma_user(cls):
+    def sk_base_reliab_karma_user(cls):
         """ This field is a base reliability for a karma user ("null" user) who
         always votes positively for the user's annotation."""
         return Column(Float, default=0)
 
     @declared_attr
-    def reliab_spam_karma_user(cls):
+    def sk_reliab_karma_user(cls):
         return Column(Float, default=0)
 
 
@@ -84,6 +85,14 @@ class ItemMixin(object):
     @declared_attr
     def id(cls):
         return Column(String, primary_key=True)
+
+    @declared_attr
+    def parent_id(cls):
+        return Column(String, ForeignKey(ITEM_TABLE_ID_FIELD))
+
+    @declared_attr
+    def parent(cls)
+        return relationship(ITEM_CLASS_NAME)
 
     # Authors's id
     @declared_attr
@@ -109,15 +118,15 @@ class ItemMixin(object):
     # todo(michael): initialise spam weight according to user's spam karma user
     # reliability
     @declared_attr
-    def weight_spam_k(cls):
+    def sk_weight(cls):
         """ weight_spam_k is a weight of an item wich computed in Karger's
         algorithm. Negative weight indicates spam.
         """
         return Column(Float)
 
     @declared_attr
-    def participate_offline_spam_detect(cls):
-        return Column(Boolean, default=True)
+    def sk_frozen(cls):
+        return Column(Boolean, default=False)
 
     @declared_attr
     def marked_for_mm(cls):
@@ -125,9 +134,9 @@ class ItemMixin(object):
         return Column(Boolean, default=False)
 
     @classmethod
-    def get_items_offline_spam_detect(cls, session):
+    def sk_get_items_offline_spam_detect(cls, session):
         items = session.query(cls).filer(
-                     cls.participate_offline_spam_detect == True).all()
+                     cls.sk_frozen == False).all()
         return items
 
     @classmethod
@@ -149,9 +158,9 @@ class ItemMixin(object):
     def add_item(cls, item_id, user, session):
         annot = cls(item_id, user.id)
         # Computes initial spam weight of the item.
-        val = user.reliab_spam_karma_user * gk.ALGO_KARGER_KARMA_USER_VOTE
+        val = user.sk_reliab_karma_user * gk.ALGO_KARGER_KARMA_USER_VOTE
         val = gk.asympt_func(val)
-        annot.weight_spam_k = val
+        annot.sk_weight = val
         session.add(annot)
         session.flush()
         return annot
@@ -165,6 +174,8 @@ class ItemMixin(object):
 
 
 class ActionMixin(object):
+    # todo(michael): some annotation correspond to action. We need to take care
+    # of it.
 
     __tablename__ = ACTION_TABLE_NAME
     cls = None
@@ -208,7 +219,7 @@ class ActionMixin(object):
         return Column(Boolean, default=False)
 
     @declared_attr
-    def participate_offline_spam_detect(cls):
+    def sk_frozen(cls):
         """ If the field is true, then the action participate in offline spam
         detection."""
         return Column(Boolean, defauld=True)
@@ -221,9 +232,9 @@ class ActionMixin(object):
         return action
 
     @classmethod
-    def get_actions_offline_spam_detect(cls, session):
+    def sk_get_actions_offline_spam_detect(cls, session):
         actions = session.query(cls).filer(
-                     cls.participate_offline_spam_detect == True).all()
+                     cls.sk_frozen == False).all()
         return actions
 
     @classmethod
