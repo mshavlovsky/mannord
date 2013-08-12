@@ -33,7 +33,7 @@ class User(object):
         self.reliability = 0
         # Raw reliability is user's reliability before applying asymptotic
         # function or normalization. We need it to perform online update.
-        u.reliability_raw = 0
+        self.reliability_raw = 0
         # answers is a dictionary of user's flags/votes: it maps item id to
         # answer A by the user.
         # In terms of spam/ham: if A is positive then the item is ham and if A

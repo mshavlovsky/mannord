@@ -4,6 +4,8 @@ import numpy as np
 
 ALGO_DIRICHLET_KARMA_USER_VOTE = 0.5
 
+DEBUG = False
+
 
 def compute_percentile_dirichlet(neg, pos, percentile):
     """ Numerically computes percentile of Dirichlet distribution.
@@ -33,7 +35,16 @@ def compute_percentile_dirichlet(neg, pos, percentile):
 
 def get_reliability(u_n, u_p):
     perc = 0.8
-    mid_point = compute_percentile_dirichlet(0, 0, perc)
+    # todo(michael): mid_point determines what is default attitude towards
+    # a user. If it is 0 then we treat user with no feedback positively.
+    # If we compute mod_point as percentile of 0,0 case, then user would
+    # have any impact only if it has some agreement with other users.
+    # todo(michael): Another important property in a case when a new user
+    # has zero reliability is that user's reliability converges to zero.
+    # Understand better this behaviour.
+
+    #mid_point = compute_percentile_dirichlet(0, 0, perc)
+    mid_point = 0
     val = compute_percentile_dirichlet(u_n, u_p, perc)
     val = max(0, val - mid_point)
     val = (val / (1 - mid_point)) ** 2
@@ -47,6 +58,23 @@ def get_item_weight(c_n, c_p):
     return val - mid_point
 
 
+def neg_first(val1, val2):
+    """A helper function which returns a tuple of original values.
+    It puts negative item on the first place"""
+    # Sanity check.
+    if val1 * val2 > 0:
+        raise Exception("Number should have opposite sign.")
+    if val1 < 0:
+        return val1, val2
+    if val2 < 0:
+        return val2, val1
+    # If we reached this point than one values is at leas zero and
+    # it should go first.
+    if val1 > 0:
+        return val2, val1
+    return val1, val2
+
+
 class Item(object):
 
     def __init__(self, item_id):
@@ -55,6 +83,7 @@ class Item(object):
         self.c_p = 0
         # c_n is a sum of negative signals sent towards the item
         self.c_n = 0
+        self.weight = 0
         # A list of messages from users.
         self.msgs = []
 
@@ -85,6 +114,9 @@ class Message_to_user(object):
         self.c_n = c_n
         self.c_p = c_p
 
+    def __repr__(self):
+        return "Message from item %s, c_n = %s, c_p = %s" % (self.item_id,
+                                                    self.c_n, self.c_p)
 
 class Message_to_item(object):
     """ A message from user to item."""
@@ -92,6 +124,9 @@ class Message_to_item(object):
     def __init__(self, user_id, value):
         self.user_id = user_id
         self.value = value
+
+    def __repr__(self):
+        return "Message from user %s, value = %s " % (self.user_id, self.value)
 
 
 class Graph(object):
@@ -121,22 +156,13 @@ class Graph(object):
         # Adds answer
         u.answers[it.id] = answer
 
+
     def get_item(self, item_id):
         return self.item_dict.get(item_id)
+ 
 
     def get_user(self, user_id):
         return self.user_dict.get(user_id)
-
-    def neg_first(val1, val2):
-        """A helper function which returns a tuple of original values.
-        It puts negative item on the first place"""
-        # Sanity check.
-        if val1 * val2 > 0:
-            raise Exception("Number should have opposite sign.")
-        result = (val1, val2) if val1 < 0 else  (val2, val1)
-        if result[1] < 0:
-            result = result[::-1]
-        return result
 
 
     def _propagate_from_users(self):
@@ -145,7 +171,7 @@ class Graph(object):
         # For each user computes u_n and u_p  over ALL item.
         # To get u_n and u_p for a particular item we need to subtract a value
         # related to the item from u_n and u_p.
-        for u in self.user:
+        for u in self.users:
             u.u_n = u.base_u_n
             u.u_p = u.base_u_p
             for msg in u.msgs:
@@ -174,7 +200,8 @@ class Graph(object):
             it.c_n, it.c_p = 0, 0
             for msg in it.msgs:
                 u = self.user_dict[msg.user_id]
-                val = u.answers[it.id] * u.reliability
+                #val = u.answers[it.id] * u.reliability
+                val = u.answers[it.id] * msg.value
                 if val < 0:
                     it.c_n += val
                 else:
@@ -182,14 +209,15 @@ class Graph(object):
             # Sends messages to users.
             for msg in it.msgs:
                 u = self.user_dict[msg.user_id]
-                val = u.answers[it.id] * u.reliability
+                #val = u.answers[it.id] * u.reliability
+                val = u.answers[it.id] * msg.value
                 c_n = it.c_n
                 c_p = it.c_p
                 if val < 0:
                     c_n -= val
                 else:
                     c_p -= val
-                it.msgs.append(Message_to_user(it.id, c_n, c_p))
+                u.msgs.append(Message_to_user(it.id, c_n, c_p))
 
 
     def _compute_items_weight(self):
@@ -208,7 +236,7 @@ class Graph(object):
                     it.c_n += val
                 else:
                     it.c_p += val
-            it.weight = get_item_weight(it.c_n, it.c_n)
+            it.weight = get_item_weight(it.c_n, it.c_p)
 
 
     def compute_answers(self, k_max):
@@ -221,8 +249,23 @@ class Graph(object):
                 msg = Message_to_item(u.id, u.answers[it_id])
                 it.msgs.append(msg)
         # Runs main iterations.
+        if DEBUG:
+            for it in self.items:
+                for msg in it.msgs:
+                    print msg
         for i in xrange(k_max):
+            if DEBUG:
+                print ''
+                print 'iteration', i
             self._propagate_from_items()
+            if DEBUG:
+                for u in self.users:
+                    for msg in u.msgs:
+                        print msg
             self._propagate_from_users()
+            if DEBUG:
+                for it in self.items:
+                    for msg in it.msgs:
+                        print msg
         # Aggregating item information.
         self._aggregate_items()
