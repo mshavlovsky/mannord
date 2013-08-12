@@ -201,7 +201,8 @@ class Graph(object):
             for msg in it.msgs:
                 u = self.user_dict[msg.user_id]
                 #val = u.answers[it.id] * u.reliability
-                val = u.answers[it.id] * msg.value
+                #val = u.answers[it.id] * msg.value
+                val = msg.value
                 if val < 0:
                     it.c_n += val
                 else:
@@ -210,7 +211,8 @@ class Graph(object):
             for msg in it.msgs:
                 u = self.user_dict[msg.user_id]
                 #val = u.answers[it.id] * u.reliability
-                val = u.answers[it.id] * msg.value
+                #val = u.answers[it.id] * msg.value
+                val = msg.value
                 c_n = it.c_n
                 c_p = it.c_p
                 if val < 0:
