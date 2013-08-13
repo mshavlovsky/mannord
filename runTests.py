@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 import unittest
 
-from models import (ItemMixin, UserMixin)
+from models import (ItemMixin, UserMixin, ActionMixin)
 import mannord as mnrd
 
 Base = declarative_base()
@@ -20,20 +20,14 @@ class User(Base, UserMixin):
         pass
 
 
-class ModeratedAnnotation(Base, ItemMixin):
-
-    def __init__(self, annotation_id, user_id):
-        self.id = annotation_id
-        self.author_id = user_id
-
-
 class TestSpamFlag(unittest.TestCase):
 
     def test_spam_flag_karger(self):
         engine = create_engine('sqlite:///:memory:')
         Session = sessionmaker()
         mnrd.bind_engine(engine, Session, Base)
-        mnrd.bootstrap(Base, engine, User, ModeratedAnnotation)
+        mnrd.bootstrap(Base, engine)
+        ModeratedAnnotation = ItemMixin.cls
         session = Session()
 
         # Creates users and annotations
@@ -52,6 +46,8 @@ class TestSpamFlag(unittest.TestCase):
 
         # Adds a flag and deletes it.
         mnrd.raise_spam_flag(annot1, user2, session)
+        actions = ActionMixin.cls.sk_get_actions_offline_spam_detect(session)
+        print 'action length', len(actions)
         self.assertTrue(annot1.spam_flag_counter == 1)
         mnrd.raise_ham_flag(annot1, user2, session)
         self.assertTrue(annot1.spam_flag_counter == 0)
@@ -62,8 +58,10 @@ class TestSpamFlag(unittest.TestCase):
         mnrd.raise_spam_flag(annot1, user1, session)
         mnrd.raise_spam_flag(annot2, user2, session)
         mnrd.raise_spam_flag(annot2, user1, session)
+        mnrd.run_offline_spam_detection('karger', session)
         self.assertTrue(annot1.spam_flag_counter == 2)
         print annot1.sk_weight
+        self.assertTrue(annot1.sk_weight < 0)
         #flag_as_spam(annot1, user3, datetime.utcnow(), session)
         #self.assertTrue(annot1.score == 0)
         #self.assertTrue(annot1.is_spam == True)

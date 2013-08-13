@@ -18,27 +18,31 @@ def bind_engine(engine, session, base, should_create=True):
         base.metadata.create_all(engine)
 
 
-def bootstrap(base,engine, UserClass, ItemClass):
+def bootstrap(base,engine):
     class Action(ActionMixin, base):
         pass
+
+    class ModeratedAnnotation(ItemMixin, base):
+        def __init__(self, annotation_id, user_id):
+            self.id = annotation_id
+            self.author_id = user_id
+
     base.metadata.create_all(engine)
     ActionMixin.cls = Action
-    # todo(michael): create ItemClass here and User class can be known from
-    UserMixin.cls = UserClass
-    ItemClass.cls = ItemClass
+    ItemMixin.cls = ModeratedAnnotation
 
 
 def name_check(algo_name):
-    if algo_name != ALGO_NAME_KARGER or algo_name != ALGO_NAME_DIRICHLET:
+    if algo_name != ALGO_NAME_KARGER and algo_name != ALGO_NAME_DIRICHLET:
         raise Exception("Unknown algorithm !")
 
 
 def bootstrap_check():
-    if ActionMixin.cls is None:
+    if ActionMixin.cls is None or ItemMixin.cls is None:
         raise Exception("You forgot to bootstrap the mannord!")
 
 
-def offline_spam_detection(algo_name, session):
+def run_offline_spam_detection(algo_name, session):
     """ Method runs offline spam detection. """
     # Some initial chenking.
     name_check(algo_name)

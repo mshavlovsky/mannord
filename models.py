@@ -160,7 +160,7 @@ class ItemMixin(object):
 
     @classmethod
     def sk_get_items_offline_spam_detect(cls, session):
-        items = session.query(cls).filer(
+        items = session.query(cls).filter(
                      cls.sk_frozen == False).all()
         return items
 
@@ -178,7 +178,7 @@ class ItemMixin(object):
 
     @classmethod
     def sd_get_items_offline_spam_detect(cls, session):
-        items = session.query(cls).filer(
+        items = session.query(cls).filter(
                      cls.sd_frozen == False).all()
         return items
 
@@ -291,13 +291,13 @@ class ActionMixin(object):
     # Fields related to spam detection using Karger's algorithm (sk_ prefix)
     @declared_attr
     def sk_frozen(cls):
-        """ If the field is true, then the action participate in offline spam
-        detection."""
-        return Column(Boolean, default=True)
+        """ If the field is true, then the action does not participate in
+        offline spam detection."""
+        return Column(Boolean, default=False)
 
     @classmethod
     def sk_get_actions_offline_spam_detect(cls, session):
-        actions = session.query(cls).filer(
+        actions = session.query(cls).filter(
                      cls.sk_frozen == False).all()
         return actions
 
@@ -310,7 +310,7 @@ class ActionMixin(object):
 
     @classmethod
     def sd_get_actions_offline_spam_detect(cls, session):
-        actions = session.query(cls).filer(
+        actions = session.query(cls).filter(
                      cls.sd_frozen == False).all()
         return actions
 
@@ -329,6 +329,10 @@ class ActionMixin(object):
         self.user_id = user_id
         self.type = action_type
         self.timestamp = timestamp
+
+    def __repr__(self):
+        return '<Action of user %s on item %s, type %s>' % (self.user_id,
+                                        self.item_id, self.type)
 
 
 class ComputationMixin(object):

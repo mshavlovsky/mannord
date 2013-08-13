@@ -18,6 +18,7 @@ THRESHOLD_DEFINITELY_HAM = 10
 # by this amound every time he make an action on an spam/ham annotation.
 BASE_SPAM_INCREMENT = 1
 BASE_SPAM_ = 1
+KARMA_USER_VOTE = 0.5
 
 
 def run_offline_computations(session):
@@ -39,17 +40,20 @@ def run_offline_computations(session):
     graph = gk.Graph()
     # Fetches all actions
     actions = ActionClass.sk_get_actions_offline_spam_detect(session)
+    for act in actions:
+        print act
     items = ItemClass.sk_get_items_offline_spam_detect(session)
     # Adds info to the graph object.
     _add_spam_info_to_graph_k(graph, items, actions)
     # Runs vandalism detection!
+    print graph
     graph.compute_answers(K_MAX)
     # Marks spam annotations.
     _mark_spam_items(graph, items, actions)
     # Saves information back to the DB
     session.flush()
 
-def _add_spam_info_to_graph_k(graph, actions, item):
+def _add_spam_info_to_graph_k(graph, items, actions):
     """ Adds spam information a graph for detection using Karger's algorithm.
     """
     # Adds flag information (graph.add_answer(...)) to the graph object.
@@ -57,11 +61,11 @@ def _add_spam_info_to_graph_k(graph, actions, item):
         if act.type == ACTION_FLAG_SPAM:
             # Spam flag!
             graph.add_answer(act.user_id, act.item_id, -1,
-                base_reliab = act.user.sk_base_reliab)
+                base_reliability = act.user.sk_base_reliab)
         elif act.type == ACTION_FLAG_HAM or act.type == ACTION_UPVOTE:
             # Ham flag!
             graph.add_answer(act.user_id, act.item_id, 1,
-                base_reliab = act.user.sk_base_reliab)
+                base_reliability = act.user.sk_base_reliab)
         else:
             # The action does not related to vandalizm detection, so ignore it.
             # todo(michael): make sure that after flush() the action is unmarked
@@ -70,7 +74,7 @@ def _add_spam_info_to_graph_k(graph, actions, item):
     for it in items:
         # Creates karma user (old "null" user)
         graph.add_answer(-it.author.id, it.id, KARMA_USER_VOTE,
-                   base_reliab = it.author.sk_karma_user_base_reliab)
+                   base_reliability = it.author.sk_karma_user_base_reliab)
 
 def _mark_spam_items(graph, items, actions):
     """ Marks items as spam/ham and excludes them from future offline
@@ -82,7 +86,7 @@ def _mark_spam_items(graph, items, actions):
         it.sk_frozen = False
         # item_k represents item "it" in the algorithm, it contains spam info.
         item_k = graph.get_item(it.id)
-        spam_weight = item_k.sk_weight
+        spam_weight = item_k.weight
         # Marks spam and ham
         if spam_weight < THRESHOLD_SPAM:
             it.is_spam = True
@@ -209,7 +213,7 @@ def _raise_spam_ham_flag_fresh(item, user, timestamp,
     if item.sk_frozen:
         val = np.sign(item.sk_weight) * answr * BASE_SPAM_INCREMENT
         user.sk_base_reliab += val
-        # Mark action to not use in onffline spam detection.
+        # Mark action to not use in offline spam detection.
         act.sk_frozen = True
         session.flush()
         return

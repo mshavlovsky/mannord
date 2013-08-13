@@ -2,7 +2,6 @@
 import numpy as np
 
 USE_ASYMPTOTIC_FUNC = True
-ALGO_KARGER_KARMA_USER_VOTE = 0.5
 DEBUG = False
 
 class Item(object):
@@ -17,6 +16,9 @@ class Item(object):
         self.weight = 0
         # A list of messages from users.
         self.msgs = []
+
+    def __repr__(self):
+        return '<Item %s>' % self.id
 
 
 class User(object):
@@ -41,6 +43,9 @@ class User(object):
         self.answers = {}
         # A list of messages from items.
         self.msgs = []
+
+    def __repr__(self):
+        return '<User %s>' % self.id
 
 
 def asympt_func(val):
@@ -73,6 +78,14 @@ class Graph(object):
         self.user_dict = {}
         # normalization is to normalize user's reliability.
         self.normaliz = 1
+
+    def __repr__(self):
+        s = 'Graph \n'
+        for u in self.users:
+            for it_id in u.answers:
+                s = '%s user %s -> item %s, value %s \n' % (s, u.id, it_id,
+                                                               u.answers[it_id])
+        return s
 
     @classmethod
     def from_lists(cls, user_list, item_list):
@@ -115,7 +128,7 @@ class Graph(object):
             it.msgs = []
 
         for u in self.users:
-            u.reliability = 0# u.base_reliability
+            u.reliability = u.base_reliability
             # Computes user unnormalized reliability
             for msg in u.msgs:
                 u.reliability += msg.value# * u.answers[msg.source_id]
@@ -139,7 +152,7 @@ class Graph(object):
             for msg in u.msgs:
                 # todo(michael): reliability should not be multiplied by answer!
                 val = u.reliability - msg.value# * u.answers[msg.source_id]
-                val = val * u.answers[msg.source_id] + u.base_reliability
+                val = (val + u.base_reliability) * u.answers[msg.source_id]
                 if USE_ASYMPTOTIC_FUNC:
                     val = asympt_func(val)
                 else:
