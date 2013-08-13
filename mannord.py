@@ -1,10 +1,8 @@
 from sqlalchemy import create_engine, and_
 from datetime import datetime
 import numpy as np
-from models import (ActionMixin, UserMixin, ItemMixin,
-                    ACTION_FLAG_SPAM, ACTION_FLAG_HAM,
-                    ACTION_UPVOTE, ACTION_DOWNVOTE,
-                    THRESHOLD_SCORE_SPAM, SCORE_DEFAULT)
+from models import (ActionMixin, UserMixin, ItemMixin)
+
 
 import spam_detection_karger as sdk
 import spam_detection_dirichlet as sdd
@@ -54,7 +52,7 @@ def offline_spam_detection(algo_name, session):
     session.flush()
 
 
-def flag_spam(item, user, session, algo_name=ALGO_NAME_KARGER):
+def raise_spam_flag(item, user, session, algo_name=ALGO_NAME_KARGER):
     timestamp = datetime.utcnow()
     bootstrap_check()
     if algo_name == ALGO_NAME_KARGER:
@@ -64,7 +62,7 @@ def flag_spam(item, user, session, algo_name=ALGO_NAME_KARGER):
         pass
 
 
-def flag_ham(item, user, session, algo_name=ALGO_NAME_KARGER):
+def raise_ham_flag(item, user, session, algo_name=ALGO_NAME_KARGER):
     timestamp = datetime.utcnow()
     bootstrap_check()
     if algo_name == ALGO_NAME_KARGER:

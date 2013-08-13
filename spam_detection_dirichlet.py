@@ -1,7 +1,6 @@
 from models import (ActionMixin, UserMixin, ItemMixin,
                     ACTION_FLAG_SPAM, ACTION_FLAG_HAM,
-                    ACTION_UPVOTE, ACTION_DOWNVOTE,
-                    THRESHOLD_SCORE_SPAM, SCORE_DEFAULT)
+                    ACTION_UPVOTE, ACTION_DOWNVOTE)
 
 import graph_d as gd
 

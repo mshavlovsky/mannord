@@ -1,7 +1,7 @@
+import numpy as np
 from models import (ActionMixin, UserMixin, ItemMixin,
                     ACTION_FLAG_SPAM, ACTION_FLAG_HAM,
-                    ACTION_UPVOTE, ACTION_DOWNVOTE,
-                    THRESHOLD_SCORE_SPAM, SCORE_DEFAULT)
+                    ACTION_UPVOTE, ACTION_DOWNVOTE)
 
 import graph_k as gk
 
@@ -18,6 +18,7 @@ THRESHOLD_DEFINITELY_HAM = 10
 # by this amound every time he make an action on an spam/ham annotation.
 BASE_SPAM_INCREMENT = 1
 BASE_SPAM_ = 1
+
 
 def run_offline_computations(session):
     """ The function
@@ -81,7 +82,7 @@ def _mark_spam_items(graph, items, actions):
         it.sk_frozen = False
         # item_k represents item "it" in the algorithm, it contains spam info.
         item_k = graph.get_item(it.id)
-        spam_weight = item_k.weight
+        spam_weight = item_k.sk_weight
         # Marks spam and ham
         if spam_weight < THRESHOLD_SPAM:
             it.is_spam = True
@@ -121,20 +122,21 @@ def _mark_spam_items(graph, items, actions):
 
 def flag_spam(item, user, timestamp, session):
     # Check whether the annotation was flagged as spam.
-    act = ActionMixin.cls.get_action(item.id, user.id, ACTION_FLAG_SPAM)
+    act = ActionMixin.cls.get_action(item.id, user.id, ACTION_FLAG_SPAM, session)
     if not act is None:
         # Nothing todo.
         # todo(michael): We can return special code when user tries to flag
         # spam when he/she already has done it.
         return
     # Check whether the item was flagged as ham.
-    act = ActionMixin.cls.get_action(item.id, user.id, ACTION_FLAG_HAM)
+    act = ActionMixin.cls.get_action(item.id, user.id, ACTION_FLAG_HAM, session)
     if act is None:
         # Flag as spam the first time!
         _raise_spam_ham_flag_fresh(item, user, timestamp, session, spam_flag=True)
     else:
         # The item was flagged as ham.
         # Undoes effects of ham flag.
+        # todo(michael): add spam flag counter
         _undo_spam_ham_flag(item, user, session, spam_flag=False)
         # Deletes the ham aciton.
         session.delete(act)
@@ -144,20 +146,20 @@ def flag_spam(item, user, timestamp, session):
 
 def flag_ham(item, user, timestamp, session):
     # Check whether the item was flagged as ham.
-    act = ActionMixin.cls.get_action(item.id, user.id, ACTION_FLAG_HAM)
+    act = ActionMixin.cls.get_action(item.id, user.id, ACTION_FLAG_HAM, session)
     if not act is None:
         # Nothing todo.
         return
     # Check whether the item was flagged as spam.
-    act = ActionMixin.cls.get_action(item.id, user.id, ACTION_FLAG_SPAM)
+    act = ActionMixin.cls.get_action(item.id, user.id, ACTION_FLAG_SPAM, session)
     if act is None:
         # Flag as ham the first time!
         _raise_spam_ham_flag_fresh(item, user, timestamp, session, spam_flag=False)
     else:
         # The item was flagged as spam, so undo it.
         _undo_spam_ham_flag(item, user, session, spam_flag=True)
-        # Deletes the ham aciton.
-        session.delete(act)
+        # Deletes the spam aciton.
+        _delete_spam_action(act, session)
         # Flags the item as spam.
         _raise_spam_ham_flag_fresh(item, user, timestamp,
                                           session, spam_flag=False)
@@ -172,8 +174,8 @@ def _undo_spam_ham_flag(item, user, session, spam_flag=True):
     """
     answr = -1 if spam_flag else 1
     if not item.sk_frozen:
-        # The is as known as spam/ham.
-        val = np.sign(item.weight) * answr * BASE_SPAM_INCREMENT
+        # The item is as known as spam/ham.
+        val = np.sign(item.sk_weight) * answr * BASE_SPAM_INCREMENT
         user.sk_base_reliab -= val
         return
     # Okay, item participate in offline spam detection.
@@ -181,7 +183,7 @@ def _undo_spam_ham_flag(item, user, session, spam_flag=True):
     val = item.sk_weight
     item.sk_weight -= answr * user.sk_reliab
     # Updating user's raw/regular spam reliability.
-    user.sk_reliab_raw -= sign * gk.asympt_func(val)
+    user.sk_reliab_raw -= answr * gk.asympt_func(val)
     user.sk_reliab = gk.asympt_func(user.sk_reliab_raw)
     session.flush()
 
@@ -197,6 +199,7 @@ def _raise_spam_ham_flag_fresh(item, user, timestamp,
     if spam_flag:
         answr = -1
         act = ActionMixin.cls(item.id, user.id, ACTION_FLAG_SPAM, timestamp)
+        item.spam_flag_counter += 1
     else:
         answr = 1
         act = ActionMixin.cls(item.id, user.id, ACTION_FLAG_HAM, timestamp)
@@ -204,7 +207,7 @@ def _raise_spam_ham_flag_fresh(item, user, timestamp,
     # If the item is known as spam/ham then we change
     # the user's spam base reliability.
     if item.sk_frozen:
-        val = np.sign(item.weight) * answr * BASE_SPAM_INCREMENT
+        val = np.sign(item.sk_weight) * answr * BASE_SPAM_INCREMENT
         user.sk_base_reliab += val
         # Mark action to not use in onffline spam detection.
         act.sk_frozen = True
@@ -215,6 +218,14 @@ def _raise_spam_ham_flag_fresh(item, user, timestamp,
     val = item.sk_weight
     item.sk_weight += answr * user.sk_reliab
     # Updating user's raw/regular spam reliability.
-    user.sk_reliab_raw += sign * gk.asympt_func(val)
+    user.sk_reliab_raw += answr * gk.asympt_func(val)
     user.sk_reliab = gk.asympt_func(user.sk_reliab_raw)
     session.flush()
+
+def _delete_spam_action(act, session):
+    """ Deletes spam action from the db, it takes care of spam flag counter. """
+    if act is None:
+        return
+    act.item.spam_flag_counter -= 1
+    session.delete(act)
+

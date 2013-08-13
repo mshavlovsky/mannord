@@ -117,7 +117,7 @@ class ItemMixin(object):
         return Column(String, ForeignKey(ITEM_TABLE_ID_FIELD))
 
     @declared_attr
-    def parent(cls)
+    def parent(cls):
         return relationship(ITEM_CLASS_NAME)
 
     # Authors's id
@@ -142,7 +142,7 @@ class ItemMixin(object):
         return Column(Integer, default=0)
 
     @declared_attr
-    def marked_for_mm(cls):
+    def marked_for_mm(cls, default=False):
         """If the filed is true then the item is marked for metamoderation."""
         return Column(Boolean, default=False)
 
@@ -152,7 +152,7 @@ class ItemMixin(object):
         """ weight_spam_k is a weight of an item wich computed in Karger's
         algorithm. Negative weight indicates spam.
         """
-        return Column(Float)
+        return Column(Float, default=0)
 
     @declared_attr
     def sk_frozen(cls):
@@ -199,6 +199,8 @@ class ItemMixin(object):
 
     @classmethod
     def add_item(cls, item_id, user, session):
+        # todo(michael): add item's parent, if exist. Also check initializations
+        # of fields related to sd_ and sk_.
         annot = cls(item_id, user.id)
         # Computes initial spam weight of the item according do Karger's algo.
         val = user.sk_reliab_karma_user * gk.ALGO_KARGER_KARMA_USER_VOTE
@@ -251,20 +253,19 @@ class ActionMixin(object):
     def item(cls):
         return relationship(ITEM_CLASS_NAME)
 
-    # Authors's id
-    @declared_attr
-    def action_item_id(cls):
-        """Action item  is an item which corresponds to the action.
-        For example, if an annotation is a vote with explanation then
-        the vote action has link to the annotation through action_item.
-        """
-        return Column(Integer, ForeignKey(ITEM_TABLE_ID_FIELD))
+    #@declared_attr
+    #def action_item_id(cls):
+    #    """Action item  is an item which corresponds to the action.
+    #    For example, if an annotation is a vote with explanation then
+    #    the vote action has link to the annotation through action_item.
+    #    """
+    #    return Column(Integer, ForeignKey(ITEM_TABLE_ID_FIELD))
 
-    @declared_attr
-    def action_item(cls):
-        # todo(michael): there are two links to item table: item and action_item
-        # solve ambiguity in sqlalchemy
-        return relationship(ITEM_CLASS_NAME)
+    #@declared_attr
+    #def action_item(cls):
+    #    # todo(michael): there are two links to item table:item and action_item
+    #    # solve ambiguity in sqlalchemy
+    #    return relationship(ITEM_CLASS_NAME)
 
     # Action type: upvote, downvote, flag spam ... .
     @declared_attr
@@ -292,7 +293,7 @@ class ActionMixin(object):
     def sk_frozen(cls):
         """ If the field is true, then the action participate in offline spam
         detection."""
-        return Column(Boolean, defauld=True)
+        return Column(Boolean, default=True)
 
     @classmethod
     def sk_get_actions_offline_spam_detect(cls, session):
@@ -305,7 +306,7 @@ class ActionMixin(object):
     def sd_frozen(cls):
         """ If the field is true, then the action participate in offline spam
         detection."""
-        return Column(Boolean, defauld=True)
+        return Column(Boolean, default=True)
 
     @classmethod
     def sd_get_actions_offline_spam_detect(cls, session):
@@ -319,6 +320,7 @@ class ActionMixin(object):
         action = cls(item_id, user_id, action_type, value, timestamp)
         session.add(action)
         session.flush()
+
 
     # todo(michael): I assume that a class which inherits this mixin
     # will call next constructor.

@@ -5,6 +5,25 @@ import graph_k as gk
 
 class TestKargerVanilla(unittest.TestCase):
 
+    def test_2_in_agreement(self):
+        # Creating users and items.
+        g = gk.Graph()
+        g.add_answer('u1', 'it1', -1)
+        g.add_answer('u1', 'it2', -1)
+        g.add_answer('u2', 'it1', -1)
+        g.add_answer('u2', 'it2', -1)
+        # Runs main algo
+        g.compute_answers(10)
+        u1 = g.get_user('u1')
+        u2 = g.get_user('u2')
+        it1 = g.get_item('it1')
+        it2 = g.get_item('it2')
+
+        self.assertTrue(it1.weight < 0)
+        self.assertTrue(it2.weight < 0)
+        self.assertTrue(u1.reliability > 0)
+        self.assertTrue(u2.reliability > 0)
+
     def test_single_action(self):
         # If there is only one user and one item then spam weight of the
         # item is zero.
@@ -18,15 +37,16 @@ class TestKargerVanilla(unittest.TestCase):
         it1 = g.get_item('it1')
         self.assertTrue(it1.weight == 0)
 
+
     def test_2_against_1(self):
         # Creating users and items.
         g = gk.Graph()
         g.add_answer('u1', 'it1', 1)
         g.add_answer('u1', 'it2', 1)
-        g.add_answer('u1', 'it3', -1)
+        g.add_answer('u1', 'it3', 1)
         g.add_answer('u2', 'it1', 1)
         g.add_answer('u2', 'it2', 1)
-        g.add_answer('u2', 'it3', -1)
+        g.add_answer('u2', 'it3', 1)
         g.add_answer('u3', 'it1', -1)
         g.add_answer('u3', 'it2', -1)
         # Runs main algo
@@ -40,9 +60,10 @@ class TestKargerVanilla(unittest.TestCase):
 
         self.assertTrue(it1.weight > 0)
         self.assertTrue(it2.weight > 0)
-        self.assertTrue(it3.weight < 0)
+        self.assertTrue(it3.weight > 0)
         self.assertTrue(u1.reliability > 0)
         self.assertTrue(u2.reliability > 0)
+        print 'user 3 reliability', u3.reliability
         self.assertTrue(u3.reliability < 0)
 
     def test_4_against_2(self):

@@ -3,7 +3,7 @@ import numpy as np
 
 USE_ASYMPTOTIC_FUNC = True
 ALGO_KARGER_KARMA_USER_VOTE = 0.5
-
+DEBUG = False
 
 class Item(object):
 
@@ -115,14 +115,14 @@ class Graph(object):
             it.msgs = []
 
         for u in self.users:
-            u.reliability = u.base_reliability
+            u.reliability = 0# u.base_reliability
             # Computes user unnormalized reliability
             for msg in u.msgs:
-                u.reliability += msg.value * u.answers[msg.source_id]
+                u.reliability += msg.value# * u.answers[msg.source_id]
             # Computes list of values to obtain normalization coefficient later.
             reliab_list = []
             for msg in u.msgs:
-                val = u.reliability - msg.value * u.answers[msg.source_id]
+                val = u.reliability - msg.value# * u.answers[msg.source_id]
                 reliab_list.append(val)
         # Computes normalization coefficient
         self.normaliz = np.sum(np.array(reliab_list) ** 2)
@@ -137,7 +137,9 @@ class Graph(object):
         for u in self.users:
             # Sends messages to items.
             for msg in u.msgs:
-                val = u.reliability - msg.value * u.answers[msg.source_id]
+                # todo(michael): reliability should not be multiplied by answer!
+                val = u.reliability - msg.value# * u.answers[msg.source_id]
+                val = val * u.answers[msg.source_id] + u.base_reliability
                 if USE_ASYMPTOTIC_FUNC:
                     val = asympt_func(val)
                 else:
@@ -166,11 +168,12 @@ class Graph(object):
             it.weight = 0
             for msg in it.msgs:
                 u = self.user_dict[msg.source_id]
-                it.weight += msg.value * u.answers[it.id]
+                it.weight += msg.value# * u.answers[it.id]
             # Sends messages to users.
             for msg in it.msgs:
                 u = self.user_dict[msg.source_id]
-                val = it.weight - msg.value * u.answers[it.id]
+                val = it.weight - msg.value# * u.answers[it.id]
+                val = val * u.answers[it.id]
                 if USE_ASYMPTOTIC_FUNC:
                     val = asympt_func(val)
                 u.msgs.append(Msg(it.id, val))
@@ -181,7 +184,7 @@ class Graph(object):
             it.weight = 0
             for msg in it.msgs:
                 u = self.user_dict[msg.source_id]
-                it.weight += msg.value * u.answers[it.id]
+                it.weight += msg.value# * u.answers[it.id]
 
 
     def compute_answers(self, k_max):
@@ -192,10 +195,31 @@ class Graph(object):
             for it_id in u.answers.iterkeys():
                 it = self.item_dict[it_id]
                 # todo(michael): is it necessary to randomize initial y's?
-                it.msgs.append(Msg(u.id, u.answers[it_id] * np.random.normal(1,1)))
+                it.msgs.append(Msg(u.id, u.answers[it_id]))# * np.random.normal(1,1)))
+        if DEBUG:
+            print ""
+            print "messages from users"
+            for it in self.items:
+                for msg in it.msgs:
+                    print ('user id=%s -> item id=%s, value=%s' %
+                                    (msg.source_id, it.id, msg.value))
         # Runs main iterations.
         for i in xrange(k_max):
             self._propagate_from_items()
+            if DEBUG:
+                print ""
+                print "messages from items"
+                for u in self.users:
+                    for msg in u.msgs:
+                        print ('item id=%s -> user_id= %s, value=%s' %
+                                (msg.source_id, u.id,  msg.value))
             self._propagate_from_users()
+            if DEBUG:
+                print ""
+                print "messages from users"
+                for it in self.items:
+                    for msg in it.msgs:
+                        print ('user id=%s -> item id=%s, value=%s' %
+                                        (msg.source_id, it.id, msg.value))
         # Aggregating item information.
         self._aggregate_items()
