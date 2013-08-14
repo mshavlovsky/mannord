@@ -24,6 +24,7 @@ ACTION_DOWNVOTE = 'downvote'
 ACTION_FLAG_SPAM = 'flag_spam'
 ACTION_FLAG_HAM = 'flag_ham'
 
+STRING_FIELD_LENGTH = 32
 # Explanation of prefixes of column names.
 #   - sk - a field related to spam detection using karger's algorithm
 #   - sd - a filed related to spam detection based on Dirichlet distribution
@@ -110,11 +111,11 @@ class ItemMixin(object):
 
     @declared_attr
     def id(cls):
-        return Column(String, primary_key=True)
+        return Column(String(STRING_FIELD_LENGTH), primary_key=True)
 
     @declared_attr
     def parent_id(cls):
-        return Column(String, ForeignKey(ITEM_TABLE_ID_FIELD))
+        return Column(String(STRING_FIELD_LENGTH), ForeignKey(ITEM_TABLE_ID_FIELD))
 
     @declared_attr
     def parent(cls):
@@ -251,7 +252,7 @@ class ActionMixin(object):
     # item_id is an id of an item on which the action was performed.
     @declared_attr
     def item_id(cls):
-        return Column(String, ForeignKey(ITEM_TABLE_ID_FIELD))
+        return Column(String(STRING_FIELD_LENGTH), ForeignKey(ITEM_TABLE_ID_FIELD))
 
     @declared_attr
     def item(cls):
@@ -274,7 +275,7 @@ class ActionMixin(object):
     # Action type: upvote, downvote, flag spam ... .
     @declared_attr
     def type (cls):
-        return Column(String)
+        return Column(String(STRING_FIELD_LENGTH))
 
     @declared_attr
     def timestamp(cls):
@@ -350,7 +351,7 @@ class ComputationMixin(object):
 
     @declared_attr
     def name(cls):
-        return Column(String, primary_key=True)
+        return Column(String(STRING_FIELD_LENGTH), primary_key=True)
 
     @declared_attr
     def normalization(cls):

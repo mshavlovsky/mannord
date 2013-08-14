@@ -13,13 +13,12 @@ class Item(object):
         # in other words it is a sum over all users j: A_ij * y_ji
         # where A_ij is vote/flag of user j to annotation i, y_ji is reliability
         # of user j
-        # todo(michael): connect default weight with null user in case of few votes?
         self.weight = 0
         # A list of messages from users.
         self.msgs = []
 
     def __repr__(self):
-        return '<Item %s>' % self.id
+        return '<Item %s, weight %s >' % (self.id, self.weight)
 
 
 class User(object):
@@ -46,7 +45,7 @@ class User(object):
         self.msgs = []
 
     def __repr__(self):
-        return '<User %s>' % self.id
+        return '<User %s, reliability %s>' % (self.id, self.reliability)
 
 
 def asympt_func(val):
@@ -95,10 +94,15 @@ class Graph(object):
     def __repr__(self):
         s = 'Graph \n'
         for u in self.users:
+            s = '%s %s\n' % (s, u)
+        for it in self.items:
+            s = '%s %s\n' % (s, it)
+        for u in self.users:
             for it_id in u.answers:
                 s = '%s user %s -> item %s, value %s \n' % (s, u.id, it_id,
                                                                u.answers[it_id])
         return s
+
 
     @classmethod
     def from_lists(cls, user_list, item_list):

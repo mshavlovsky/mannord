@@ -5,6 +5,29 @@ import graph_k as gk
 
 class TestKargerVanilla(unittest.TestCase):
 
+    def test_2negative_against_1(self):
+        # Creating users and items.
+        g = gk.Graph()
+        g.add_answer('u1', 'it1', -1)
+        g.add_answer('u1', 'it2', -1)
+        g.add_answer('u2', 'it1', -1)
+        g.add_answer('u2', 'it2', -1)
+        g.add_answer('u3', 'it1', 0.3)
+        g.add_answer('u3', 'it2', 0.3)
+        # Runs main algo
+        g.compute_answers(10)
+        u1 = g.get_user('u1')
+        u2 = g.get_user('u2')
+        u3 = g.get_user('u3')
+        it1 = g.get_item('it1')
+        it2 = g.get_item('it2')
+
+        self.assertTrue(it1.weight < 0)
+        self.assertTrue(it2.weight < 0)
+        self.assertTrue(u1.reliability > 0)
+        self.assertTrue(u2.reliability > 0)
+        self.assertTrue(u3.reliability < 0)
+
     def test_2_in_agreement(self):
         # Creating users and items.
         g = gk.Graph()
