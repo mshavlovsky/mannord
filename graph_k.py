@@ -1,8 +1,9 @@
 # Implementation of Karger's algorithm with some modifications.
 import numpy as np
 
-USE_ASYMPTOTIC_FUNC = True
-DEBUG = False
+USE_ASYMPTOTIC_FUNC = False#True
+DEBUG = True#False
+DEFAULT_RELIABILITY = 0.5
 
 class Item(object):
 
@@ -10,7 +11,7 @@ class Item(object):
         self.id = item_id
         # weight is a message from item to users in Karger's algorithm
         # in other words it is a sum over all users j: A_ij * y_ji
-        # where A_ij is vote/flag of user j to annotatio i, y_ji is reliability
+        # where A_ij is vote/flag of user j to annotation i, y_ji is reliability
         # of user j
         # todo(michael): connect default weight with null user in case of few votes?
         self.weight = 0
@@ -25,7 +26,7 @@ class User(object):
 
     def __init__(self, user_id):
         self.id = user_id
-        # Base reliability is the constant wich we add to user's reliability
+        # Base reliability is the constant which we add to user's reliability
         # on each iteration. We change base reliability whe user votes/flags on
         # item which is already defined as spam/ham and this item
         # does not participate in main Kargers's algorithm to reduce workload.
@@ -59,6 +60,18 @@ def asympt_func(val):
     #     the user.
     asymptote = 10
     return asymptote * (2/np.pi) * np.arctan(val * 1.6 / asymptote)
+
+
+def compute_normaliz(value_list):
+        normaliz = np.sum(np.array(value_list) ** 2)
+        normaliz /= float(len(value_list))
+        normaliz = normaliz ** 0.5
+        if normaliz == 0:
+            # If noramlization is zero then all messages have zero value!
+            # In this case we make normalization to 1 to avoid computation
+            # difficulties.
+            normaliz = 1.0
+        return normaliz
 
 
 class Msg(object):
@@ -117,79 +130,86 @@ class Graph(object):
         # Adds answer
         u.answers[it.id] = answer
 
+
     def get_item(self, item_id):
         return self.item_dict.get(item_id)
+
 
     def get_user(self, user_id):
         return self.user_dict.get(user_id)
 
+
     def _propagate_from_users(self):
         for it in self.items:
             it.msgs = []
-
+        reliab_list = []
+        # Computes information necessary for obtaining normalization coefficient
         for u in self.users:
-            u.reliability = u.base_reliability
+            if len(u.msgs) < 2:
+                # If a user has less than two messages that is not enough
+                # information for computations, so we assign to it default
+                # reliability and exclude id from computations.
+                u.reliability_raw = DEFAULT_RELIABILITY
+                u.reliability = DEFAULT_RELIABILITY
+                continue
+            u.reliability_raw = u.base_reliability
             # Computes user unnormalized reliability
             for msg in u.msgs:
-                u.reliability += msg.value# * u.answers[msg.source_id]
+                u.reliability_raw += msg.value
             # Computes list of values to obtain normalization coefficient later.
-            reliab_list = []
             for msg in u.msgs:
-                val = u.reliability - msg.value# * u.answers[msg.source_id]
-                reliab_list.append(val)
-        # Computes normalization coefficient
-        self.normaliz = np.sum(np.array(reliab_list) ** 2)
-        self.normaliz /= float(len(reliab_list))
-        self.normaliz = self.normaliz ** 0.5
-        if self.normaliz == 0:
-            # If noramlization is zero then all messages have zero value!
-            # In this case we make normalization to 1.
-            self.normaliz = 1.0
-
-        # Okay, now we send messages to items and compute user reliability
-        for u in self.users:
-            # Sends messages to items.
-            for msg in u.msgs:
-                # todo(michael): reliability should not be multiplied by answer!
-                val = u.reliability - msg.value# * u.answers[msg.source_id]
-                val = (val + u.base_reliability) * u.answers[msg.source_id]
+                val = u.reliability_raw - msg.value
                 if USE_ASYMPTOTIC_FUNC:
                     val = asympt_func(val)
-                else:
-                    val /= self.normaliz
+                reliab_list.append(val)
+        # Computes normalization coefficient
+        self.normaliz = compute_normaliz(reliab_list)
+        # Okay, now we send messages to items and compute user reliability
+        for u in self.users:
+            if len(u.msgs) < 2:
+                continue
+            # Sends messages to items.
+            for msg in u.msgs:
+                val = u.reliability_raw - msg.value
+                if USE_ASYMPTOTIC_FUNC:
+                    val = asympt_func(val)
+                # Normalization
+                val /= self.normaliz
+                # Final message value.
+                val = val * u.answers[msg.source_id]
+                # Sending the message.
                 it = self.item_dict[msg.source_id]
                 it.msgs.append(Msg(u.id, val))
 
-            u.reliability_raw = u.reliability
+            # Computes normalized reliability
+            val = u.reliability_raw
             if USE_ASYMPTOTIC_FUNC:
-                # Applies asymptotic function to user's reliability
-                u.reliability = asympt_func(u.reliability)
-            else:
-                # Computes normalized reliability
-                u.reliability /= self.normaliz
+                val = asympt_func(val)
+            u.reliability = val / self.normaliz
+
 
     def _propagate_from_items(self):
         for u in self.users:
             u.msgs = []
 
         for it in self.items:
-            # todo(michael): Think through whether we need base weigh for
-            # annotations in the same way we have base reliability.
-            # todo(michael: Another point is that, after user's base reliability
-            # reaches enough threshold, we want to cap it so it
-            # would not screw (make very small) other values after normalization
+            # note(michael): we probably need base weight for annotation in
+            # the same way we have base reliability of users.
+            if len(it.msgs) < 2:
+                continue
             it.weight = 0
             for msg in it.msgs:
                 u = self.user_dict[msg.source_id]
-                it.weight += msg.value# * u.answers[it.id]
+                it.weight += msg.value
             # Sends messages to users.
             for msg in it.msgs:
                 u = self.user_dict[msg.source_id]
-                val = it.weight - msg.value# * u.answers[it.id]
+                val = it.weight - msg.value
+                # note(michael): if we want to cap annotation weight then this
+                # is the place to do it.
                 val = val * u.answers[it.id]
-                if USE_ASYMPTOTIC_FUNC:
-                    val = asympt_func(val)
                 u.msgs.append(Msg(it.id, val))
+
 
     def _aggregate_items(self):
         """ Aggregates information for items """

@@ -18,7 +18,7 @@ THRESHOLD_DEFINITELY_HAM = 10
 # by this amound every time he make an action on an spam/ham annotation.
 BASE_SPAM_INCREMENT = 1
 BASE_SPAM_ = 1
-KARMA_USER_VOTE = 0.5
+KARMA_USER_VOTE = 0.3
 
 
 def run_offline_computations(session):
@@ -40,13 +40,19 @@ def run_offline_computations(session):
     graph = gk.Graph()
     # Fetches all actions
     actions = ActionClass.sk_get_actions_offline_spam_detect(session)
-    for act in actions:
-        print act
     items = ItemClass.sk_get_items_offline_spam_detect(session)
+    #--
+    #print 'num items', len(items)
+    #for it in items:
+    #    print it
+    #print 'num actions', len(actions)
+    #for act in actions:
+    #    print act
+    #--
     # Adds info to the graph object.
     _add_spam_info_to_graph_k(graph, items, actions)
-    # Runs vandalism detection!
     print graph
+    # Runs vandalism detection!
     graph.compute_answers(K_MAX)
     # Marks spam annotations.
     _mark_spam_items(graph, items, actions)
@@ -86,15 +92,16 @@ def _mark_spam_items(graph, items, actions):
         it.sk_frozen = False
         # item_k represents item "it" in the algorithm, it contains spam info.
         item_k = graph.get_item(it.id)
-        spam_weight = item_k.weight
+        print item_k, item_k.weight
+        it.sk_weight = item_k.weight
         # Marks spam and ham
-        if spam_weight < THRESHOLD_SPAM:
+        if it.sk_weight < THRESHOLD_SPAM:
             it.is_spam = True
-        if spam_weight > THRESHOLD_HAM:
-            it.is_spam = True
+        if it.sk_weight > THRESHOLD_HAM:
+            it.is_ham = True
         # Marks off items actions from offline computation
-        if (spam_weight > THRESHOLD_DEFINITELY_HAM or
-            spam_weight < THRESHOLD_DEFINITELY_SPAM):
+        if (it.sk_weight > THRESHOLD_DEFINITELY_HAM or
+            it.sk_weight < THRESHOLD_DEFINITELY_SPAM):
             it.sk_frozen = True
         # Saves reliability of a spam karma user related to an author of the item
         k_user = graph.get_user(-it.author.id)

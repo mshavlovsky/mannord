@@ -222,6 +222,10 @@ class ItemMixin(object):
         self.author_id = user_id
 
 
+    def __repr__(self):
+        return '<Item %s>' % self.id
+
+
 class ActionMixin(object):
     # todo(michael): some annotation correspond to action. We need to take care
     # of it.
