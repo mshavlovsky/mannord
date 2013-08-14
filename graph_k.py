@@ -1,8 +1,8 @@
 # Implementation of Karger's algorithm with some modifications.
 import numpy as np
 
-USE_ASYMPTOTIC_FUNC = False#True
-DEBUG = True#False
+USE_ASYMPTOTIC_FUNC = True
+DEBUG = False
 DEFAULT_RELIABILITY = 0.5
 
 class Item(object):
@@ -213,11 +213,17 @@ class Graph(object):
 
     def _aggregate_items(self):
         """ Aggregates information for items """
+        # Weights components which comes from messages.
         for it in self.items:
             it.weight = 0
             for msg in it.msgs:
                 u = self.user_dict[msg.source_id]
                 it.weight += msg.value# * u.answers[it.id]
+        # Weights component which comes directly from users.
+        for u in self.users:
+            for it_id, answr in u.answers.iteritems():
+                it = self.get_item(it_id)
+                it.weight += u.reliability * answr
 
 
     def compute_answers(self, k_max):
