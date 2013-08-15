@@ -1,5 +1,6 @@
 import numpy as np
 from models import (ActionMixin, UserMixin, ItemMixin,
+                    ComputationMixin, COMPUTATION_SK_NAME,
                     ACTION_FLAG_SPAM, ACTION_FLAG_HAM,
                     ACTION_UPVOTE, ACTION_DOWNVOTE)
 
@@ -45,8 +46,9 @@ def run_offline_computations(session):
     _add_spam_info_to_graph_k(graph, items, actions)
     # Runs vandalism detection!
     graph.compute_answers(K_MAX)
-    # Marks spam annotations.
-    _from_graph_to_db(graph, items, actions)
+    # Puts information back to the db.
+    comp = ComputationMixin.cls.get(COMPUTATION_SK_NAME, session)
+    _from_graph_to_db(graph, items, actions, comp)
     # Saves information back to the DB
     session.flush()
 
@@ -73,11 +75,14 @@ def _add_spam_info_to_graph_k(graph, items, actions):
         graph.add_answer(-it.author.id, it.id, KARMA_USER_VOTE,
                    base_reliability = it.author.sk_karma_user_base_reliab)
 
-def _from_graph_to_db(graph, items, actions):
+def _from_graph_to_db(graph, items, actions, computation):
+    # Remembers normalization coefficient.
+    computation.normalization = graph.normaliz
     # Fills users' fileds.
     for act in actions:
         u = act.user
         user_k = graph.get_user(u.id)
+        u.sk_reliab_raw = user_k.reliability_raw
         u.sk_reliab = user_k.reliability
     # Detects and mark frozen items. Fills items' fileds.
     for it in items:
@@ -170,8 +175,8 @@ def _undo_spam_ham_flag(item, user, session, spam_flag=True):
     """ The function udoes flagging spam/ham without checking for original
     action in the DB (it is assumed that it should be done outside the function)
     Arguments:
-        - spam_flag is a flag we want to reverse, i.e. we want to reverse
-        spam flag then spam_flag=True, spam_flag=False for reverting ham flag.
+        - spam_flag is a flag we want to reverse, i.e. if we want to reverse
+        spam flag then spam_flag=True; spam_flag=False for reverting ham flag.
     """
     answr = -1 if spam_flag else 1
     if item.sk_frozen:
@@ -184,9 +189,14 @@ def _undo_spam_ham_flag(item, user, session, spam_flag=True):
     val = item.sk_weight
     item.sk_weight -= answr * user.sk_reliab
     # Updating user's raw/regular spam reliability.
-    user.sk_reliab_raw -= answr * gk.asympt_func(val)
-    user.sk_reliab = gk.asympt_func(user.sk_reliab_raw)
-    # todo(michael): add normalization!
+    user.sk_reliab_raw -= answr * val
+    if gk.USE_ASYMPTOTIC_FUNC:
+        user.sk_reliab = gk.asympt_func(user.sk_reliab_raw)
+    else:
+        user.sk_reliab = user.sk_reliab_raw
+    # Normalization!
+    comp = ComputationMixin.cls.get(COMPUTATION_SK_NAME, session)
+    user.sk_reliab /= comp.normalization
     session.flush()
 
 
@@ -220,8 +230,14 @@ def _raise_spam_ham_flag_fresh(item, user, timestamp,
     val = item.sk_weight
     item.sk_weight += answr * user.sk_reliab
     # Updating user's raw/regular spam reliability.
-    user.sk_reliab_raw += answr * gk.asympt_func(val)
-    user.sk_reliab = gk.asympt_func(user.sk_reliab_raw)
+    user.sk_reliab_raw += answr * val
+    if gk.USE_ASYMPTOTIC_FUNC:
+        user.sk_reliab = gk.asympt_func(user.sk_reliab_raw)
+    else:
+        user.sk_reliab = user.sk_reliab_raw
+    # Normalization!
+    comp = ComputationMixin.cls.get(COMPUTATION_SK_NAME, session)
+    user.sk_reliab /= comp.normalization
     session.flush()
 
 def _delete_spam_action(act, session):
@@ -230,4 +246,3 @@ def _delete_spam_action(act, session):
         return
     act.item.spam_flag_counter -= 1
     session.delete(act)
-

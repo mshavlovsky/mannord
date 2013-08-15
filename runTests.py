@@ -39,10 +39,10 @@ class TestSpamFlag(unittest.TestCase):
         engine = create_engine('sqlite:///:memory:')
         #engine = create_engine("mysql://root:@localhost/mannord_test")
         Session = sessionmaker()
-        mnrd.bind_engine(engine, Session, Base)
-        mnrd.bootstrap(Base, engine)
-        ModeratedAnnotation = ItemMixin.cls
         session = Session()
+        mnrd.bind_engine(engine, Session, Base)
+        mnrd.bootstrap(Base, engine, session)
+        ModeratedAnnotation = ItemMixin.cls
 
         # Creates users and annotations
         user1 = User()
@@ -54,8 +54,10 @@ class TestSpamFlag(unittest.TestCase):
         session.flush()
         annot1 = ModeratedAnnotation('annot1', user1.id)
         annot2 = ModeratedAnnotation('annot2', user1.id)
+        annot3 = ModeratedAnnotation('annot3', user3.id)
         session.add(annot1)
         session.add(annot2)
+        session.add(annot3)
         session.commit()
 
         # Adds a flag and deletes it.
@@ -92,6 +94,14 @@ class TestSpamFlag(unittest.TestCase):
         self.assertTrue(annot1.spam_flag_counter == 0)
         self.assertTrue(annot1.sk_weight > 0)
         self.assertTrue(user1.sk_karma_user_reliab > 0)
+
+        # Testing one online update.
+        mnrd.raise_spam_flag(annot3, user1, session)
+        val = user1.sk_reliab
+        self.assertTrue(annot3.sk_weight < 0)
+        mnrd.raise_ham_flag(annot3, user1, session)
+        self.assertTrue(annot3.sk_weight > 0)
+        self.assertTrue(user1.sk_reliab > 0 and user1.sk_reliab < val)
 
 
 if __name__ == '__main__':

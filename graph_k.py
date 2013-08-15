@@ -62,6 +62,8 @@ def asympt_func(val):
 
 
 def compute_normaliz(value_list):
+        if len(value_list) == 0:
+            return 1.0
         normaliz = np.sum(np.array(value_list) ** 2)
         normaliz /= float(len(value_list))
         normaliz = normaliz ** 0.5

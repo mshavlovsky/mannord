@@ -25,6 +25,8 @@ ACTION_FLAG_SPAM = 'flag_spam'
 ACTION_FLAG_HAM = 'flag_ham'
 
 STRING_FIELD_LENGTH = 32
+
+COMPUTATION_SK_NAME = "spam_detection_karger"
 # Explanation of prefixes of column names.
 #   - sk - a field related to spam detection using karger's algorithm
 #   - sd - a filed related to spam detection based on Dirichlet distribution
@@ -355,4 +357,17 @@ class ComputationMixin(object):
 
     @declared_attr
     def normalization(cls):
-        return Column(Float)
+        return Column(Float, default=1.0)
+
+    @classmethod
+    def get(cls, name, session):
+        comp = session.query(cls).filter(
+                     cls.name == name).first()
+        return comp
+
+    def __init__(self, name):
+        self.name = name
+        self.normalization = 1.0
+
+    def __repr__(self):
+        return "<Computation Values %s, normaliz %s>" % (self.name, self.normalization)

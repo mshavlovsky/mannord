@@ -82,7 +82,6 @@ class TestKargerVanilla(unittest.TestCase):
         self.assertTrue(it3.weight > 0)
         self.assertTrue(u1.reliability > 0)
         self.assertTrue(u2.reliability > 0)
-        print 'user 3 reliability', u3.reliability
         self.assertTrue(u3.reliability < 0)
 
     def test_4_against_2(self):
@@ -131,10 +130,6 @@ class TestKargerVanilla(unittest.TestCase):
         u3 = g.get_user('u3')
         it1 = g.get_item('it1')
         it2 = g.get_item('it2')
-        print 'user1', u1.reliability
-        print 'user2', u2.reliability
-        print 'item1 weight', it1.weight
-        print 'item2 weight', it2.weight
 
         self.assertTrue(it1.weight > 0)
         self.assertTrue(it2.weight > 0)

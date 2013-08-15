@@ -1,7 +1,8 @@
 from sqlalchemy import create_engine, and_
 from datetime import datetime
 import numpy as np
-from models import (ActionMixin, UserMixin, ItemMixin)
+from models import (ActionMixin, UserMixin, ItemMixin, ComputationMixin,
+                    COMPUTATION_SK_NAME)
 
 
 import spam_detection_karger as sdk
@@ -18,7 +19,9 @@ def bind_engine(engine, session, base, should_create=True):
         base.metadata.create_all(engine)
 
 
-def bootstrap(base,engine):
+def bootstrap(base, engine, session):
+    class Computation(ComputationMixin, base):
+        pass
     class Action(ActionMixin, base):
         pass
 
@@ -28,8 +31,13 @@ def bootstrap(base,engine):
             self.author_id = user_id
 
     base.metadata.create_all(engine)
+
+    session.add(Computation(COMPUTATION_SK_NAME))
+    session.flush()
+
     ActionMixin.cls = Action
     ItemMixin.cls = ModeratedAnnotation
+    ComputationMixin.cls = Computation
 
 
 def name_check(algo_name):
@@ -38,7 +46,9 @@ def name_check(algo_name):
 
 
 def bootstrap_check():
-    if ActionMixin.cls is None or ItemMixin.cls is None:
+    if (ActionMixin.cls is None or
+        ItemMixin.cls is None or
+        ComputationMixin.cls is None):
         raise Exception("You forgot to bootstrap the mannord!")
 
 
