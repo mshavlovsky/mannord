@@ -79,8 +79,18 @@ class UserMixin(object):
         return Column(Float, default=0)
 
     # Fields related to spam detection using Dirichlet distribution (sd_ prefix)
+
+    @declared_attr
+    def sd_base_u_n(cls):
+        return Column(Float, default=0)
+
+    @declared_attr
+    def sd_base_u_p(cls):
+        return Column(Float, default=0)
+
     @declared_attr
     def sd_reliab(cls):
+        """ Spam detection reliability is computed based on u_n and u_p."""
         return Column(Float, default=0)
 
     @declared_attr
@@ -91,7 +101,17 @@ class UserMixin(object):
     def sd_u_p(cls):
         return Column(Float, default=0)
 
+    @declared_attr
+    def sd_karma_user_base_u_n(cls):
+        return Column(Float, default=0)
+
+    @declared_attr
+    def sd_karma_user_base_u_p(cls):
+        return Column(Float, default=0)
+
+    @declared_attr
     def sd_karma_user_reliab(cls):
+        """ Spam detection reliability"""
         return Column(Float, default=0)
 
     @declared_attr

@@ -159,7 +159,7 @@ class Graph(object):
 
     def get_item(self, item_id):
         return self.item_dict.get(item_id)
- 
+
 
     def get_user(self, user_id):
         return self.user_dict.get(user_id)
@@ -176,7 +176,7 @@ class Graph(object):
             u.u_p = u.base_u_p
             for msg in u.msgs:
                 A = u.answers[msg.item_id]
-                val_n, val_p = neg_first(msg.c_n * A, msg.c_p * A)
+                val_n, val_p = neg_first(msg.c_n * np.sign(A), msg.c_p * np.sign(A))
                 u.u_n += val_n
                 u.u_p += val_p
             u.reliability = get_reliability(u.u_n, u.u_p)
@@ -185,7 +185,7 @@ class Graph(object):
             # Sends messages to items.
             for msg in u.msgs:
                 A = u.answers[msg.item_id]
-                val_n, val_p = neg_first(msg.c_n * A, msg.c_p * A)
+                val_n, val_p = neg_first(msg.c_n * np.sign(A), msg.c_p * np.sign(A))
                 reliab = get_reliability(u.u_n - val_n, u.u_p - val_p)
                 # Gets item.
                 it = self.item_dict[msg.item_id]
