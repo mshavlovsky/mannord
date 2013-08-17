@@ -188,6 +188,16 @@ class ItemMixin(object):
         return items
 
     @declared_attr
+    def sd_c_n(cls):
+        """ 'Number' of negative votes for the item"""
+        return Column(Float, default=0)
+
+    @declared_attr
+    def sd_c_p(cls):
+        """ 'Number' of positive votes for the item"""
+        return Column(Float, default=0)
+
+    @declared_attr
     def sd_weight(cls):
         """ weight_spam_k is a weight of an item wich computed in Karger's
         algorithm. Negative weight indicates spam.

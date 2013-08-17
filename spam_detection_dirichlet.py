@@ -159,7 +159,46 @@ def flag_ham(item, user, timestamp, session):
 
 
 def _raise_spam_ham_flag_fresh(item, user, timestamp, session, spam_flag=True):
-    pass
+    # Creates a record in Action table
+    if spam_flag:
+        answr = -1
+        act = ActionMixin.cls(item.id, user.id, ACTION_FLAG_SPAM, timestamp)
+        item.spam_flag_counter += 1
+    else:
+        answr = 1
+        act = ActionMixin.cls(item.id, user.id, ACTION_FLAG_HAM, timestamp)
+    session.add(act)
+    # If the item is known as spam/ham then we change
+    # the user's spam base u_n and u_p.
+    if item.sd_frozen:
+        val = np.sign(item.sd_weight) * answr * BASE_SPAM_INCREMENT
+        neg, pos = gd.neg_first(0, val)
+        user.sd_base_u_n += neg
+        user.sd_base_u_p += pos
+        # Mark action to not use in offline spam detection.
+        act.sk_frozen = True
+        session.flush()
+        return
+    # Okay, item participate in offline spam detection.
+    # Updating weight of the item
+    neg, pos = gd.neg_first(0, answr * user.sd_reliab)
+    item.sd_c_n += neg
+    item.sd_c_p += pos
+    # todo(michael): here
+    item.sd_weight = 
+
+    val = item.sk_weight
+    item.sk_weight += answr * user.sk_reliab
+    # Updating user's raw/regular spam reliability.
+    user.sk_reliab_raw += answr * val
+    if gk.USE_ASYMPTOTIC_FUNC:
+        user.sk_reliab = gk.asympt_func(user.sk_reliab_raw)
+    else:
+        user.sk_reliab = user.sk_reliab_raw
+    # Normalization!
+    comp = ComputationMixin.cls.get(COMPUTATION_SK_NAME, session)
+    user.sk_reliab /= comp.normalization
+    session.flush()
 
 
 def _undo_spam_ham_flag(item, user, session, spam_flag=False):
