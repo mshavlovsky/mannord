@@ -184,25 +184,42 @@ def _raise_spam_ham_flag_fresh(item, user, timestamp, session, spam_flag=True):
     neg, pos = gd.neg_first(0, answr * user.sd_reliab)
     item.sd_c_n += neg
     item.sd_c_p += pos
-    # todo(michael): here
-    item.sd_weight = 
-
-    val = item.sk_weight
-    item.sk_weight += answr * user.sk_reliab
-    # Updating user's raw/regular spam reliability.
-    user.sk_reliab_raw += answr * val
-    if gk.USE_ASYMPTOTIC_FUNC:
-        user.sk_reliab = gk.asympt_func(user.sk_reliab_raw)
-    else:
-        user.sk_reliab = user.sk_reliab_raw
-    # Normalization!
-    comp = ComputationMixin.cls.get(COMPUTATION_SK_NAME, session)
-    user.sk_reliab /= comp.normalization
+    # Remembering original item's weight
+    val = item.sd_weight
+    item.sd_weight = gd.get_item_weight(item.sd_c_n, item.sd_c_p)
+    # Updating user's parameters.
+    neg, pos = gd.neg_first(anwer * item.val)
+    user.sd_u_n += neg
+    user.sd_u_p += pos
+    user.sd_reliab = gd.get_reliability(user.sd_u_n, user.sd_u_p)
     session.flush()
 
 
 def _undo_spam_ham_flag(item, user, session, spam_flag=False):
-    pass
+    answr = -1 if spam_flag else 1
+    if item.sd_frozen:
+        val = np.sign(item.sd_weight) * answr * BASE_SPAM_INCREMENT
+        neg, pos = gd.neg_first(0, val)
+        user.sd_base_u_n -= neg
+        user.sd_base_u_p -= pos
+        # Mark action to not use in offline spam detection.
+        act.sk_frozen = True
+        session.flush()
+        return
+    # Okay, item participate in offline spam detection.
+    # Updating weight of the item
+    neg, pos = gd.neg_first(0, answr * user.sd_reliab)
+    item.sd_c_n -= neg
+    item.sd_c_p -= pos
+    # Remembering original item's weight
+    val = item.sd_weight
+    item.sd_weight = gd.get_item_weight(item.sd_c_n, item.sd_c_p)
+    # Updating user's parameters.
+    neg, pos = gd.neg_first(anwer * item.val)
+    user.sd_u_n -= neg
+    user.sd_u_p -= pos
+    user.sd_reliab = gd.get_reliability(user.sd_u_n, user.sd_u_p)
+    session.flush()
 
 
 def _delete_spam_action(act, session):
