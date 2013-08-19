@@ -87,6 +87,9 @@ class Item(object):
         # A list of messages from users.
         self.msgs = []
 
+    def __repr__(self):
+        return '<Item %s, weight %s >' % (self.id, self.weight)
+
 
 class User(object):
 
@@ -104,6 +107,9 @@ class User(object):
         self.answers = {}
         # A list of messages from items.
         self.msgs = []
+
+    def __repr__(self):
+        return '<User %s, reliability %s>' % (self.id, self.reliability)
 
 
 class Message_to_user(object):
@@ -138,6 +144,18 @@ class Graph(object):
         self.user_dict = {}
         # normalization is to normalize user's reliability.
         self.normaliz = 1
+
+    def __repr__(self):
+        s = 'Graph \n'
+        for u in self.users:
+            s = '%s %s\n' % (s, u)
+        for it in self.items:
+            s = '%s %s\n' % (s, it)
+        for u in self.users:
+            for it_id in u.answers:
+                s = '%s user %s -> item %s, value %s \n' % (s, u.id, it_id,
+                                                               u.answers[it_id])
+        return s
 
     def add_answer(self, user_id, item_id, answer, base_u_n=0, base_u_p=0):
         """ Method adds answer to dictionary user.answers. If user or item

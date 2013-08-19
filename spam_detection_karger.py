@@ -19,7 +19,6 @@ THRESHOLD_DEFINITELY_HAM = np.inf
 # by this amound every time he make an action on an spam/ham annotation.
 BASE_SPAM_INCREMENT = 1
 BASE_SPAM_ = 1
-KARMA_USER_VOTE = 0.3
 
 
 def run_offline_computations(session):
@@ -72,7 +71,7 @@ def _add_spam_info_to_graph_k(graph, items, actions):
             continue
     for it in items:
         # Creates karma user (old "null" user)
-        graph.add_answer(-it.author.id, it.id, KARMA_USER_VOTE,
+        graph.add_answer(-it.author.id, it.id, gk.KARMA_USER_VOTE,
                    base_reliability = it.author.sk_karma_user_base_reliab)
 
 def _from_graph_to_db(graph, items, actions, computation):

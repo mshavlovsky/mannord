@@ -38,7 +38,7 @@ def run_offline_computations(session):
     session.flush()
 
 
-def _add_spam_info_to_graph_d(graph, items, actions)
+def _add_spam_info_to_graph_d(graph, items, actions):
     for act in actions:
         if act.type == ACTION_FLAG_SPAM:
             # Spam flag!
@@ -57,7 +57,7 @@ def _add_spam_info_to_graph_d(graph, items, actions)
           base_u_n = it.author.sd_base_u_n, base_u_p = it.author.sd_base_u_p)
 
 
-def _from_graph_to_db(graph, items, actions)
+def _from_graph_to_db(graph, items, actions):
     # Fills users' fileds.
     for act in actions:
         u = act.user
@@ -188,7 +188,7 @@ def _raise_spam_ham_flag_fresh(item, user, timestamp, session, spam_flag=True):
     val = item.sd_weight
     item.sd_weight = gd.get_item_weight(item.sd_c_n, item.sd_c_p)
     # Updating user's parameters.
-    neg, pos = gd.neg_first(anwer * item.val)
+    neg, pos = gd.neg_first(0, answr * val)
     user.sd_u_n += neg
     user.sd_u_p += pos
     user.sd_reliab = gd.get_reliability(user.sd_u_n, user.sd_u_p)
@@ -215,7 +215,7 @@ def _undo_spam_ham_flag(item, user, session, spam_flag=False):
     val = item.sd_weight
     item.sd_weight = gd.get_item_weight(item.sd_c_n, item.sd_c_p)
     # Updating user's parameters.
-    neg, pos = gd.neg_first(anwer * item.val)
+    neg, pos = gd.neg_first(0, answr * val)
     user.sd_u_n -= neg
     user.sd_u_p -= pos
     user.sd_reliab = gd.get_reliability(user.sd_u_n, user.sd_u_p)

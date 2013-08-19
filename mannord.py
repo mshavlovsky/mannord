@@ -26,9 +26,7 @@ def bootstrap(base, engine, session):
         pass
 
     class ModeratedAnnotation(ItemMixin, base):
-        def __init__(self, annotation_id, user_id):
-            self.id = annotation_id
-            self.author_id = user_id
+        pass
 
     base.metadata.create_all(engine)
 

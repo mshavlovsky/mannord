@@ -234,15 +234,7 @@ class ItemMixin(object):
     def add_item(cls, item_id, user, session):
         # todo(michael): add item's parent, if exist. Also check initializations
         # of fields related to sd_ and sk_.
-        annot = cls(item_id, user.id)
-        # Computes initial spam weight of the item according do Karger's algo.
-        val = user.sk_reliab_karma_user * gk.ALGO_KARGER_KARMA_USER_VOTE
-        val = gk.asympt_func(val)
-        annot.sk_weight = val
-        # Computes initial spam weight of the item according do Dirichelt
-        u_n = user.sd_karma_user_u_n
-        u_p = user.sd_karma_user_u_p
-        annot.sd_weight = gd.get_item_weight(u_n, u_p)
+        annot = cls(item_id, user)
         session.add(annot)
         session.flush()
         return annot
@@ -250,9 +242,15 @@ class ItemMixin(object):
     # todo(michiael): If ItemMixin will be used to add tables columns to
     # wider item class, then we need act in the same way as with
     # User table.
-    def __init__(self, item_id, user_id):
+    def __init__(self, item_id, user):
         self.id = item_id
-        self.author_id = user_id
+        self.author_id = user.id
+        val = user.sk_karma_user_reliab * gk.KARMA_USER_VOTE
+        self.sk_weight = gk.asympt_func(val)
+        # Computes initial spam weight of the item according do Dirichelt
+        u_n = user.sd_karma_user_u_n
+        u_p = user.sd_karma_user_u_p
+        self.sd_weight = gd.get_item_weight(u_n, u_p)
 
 
     def __repr__(self):
@@ -343,7 +341,7 @@ class ActionMixin(object):
     def sd_frozen(cls):
         """ If the field is true, then the action participate in offline spam
         detection."""
-        return Column(Boolean, default=True)
+        return Column(Boolean, default=False)
 
     @classmethod
     def sd_get_actions_offline_spam_detect(cls, session):

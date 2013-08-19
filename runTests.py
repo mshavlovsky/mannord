@@ -52,9 +52,9 @@ class TestSpamFlag(unittest.TestCase):
         session.add(user2)
         session.add(user3)
         session.flush()
-        annot1 = ModeratedAnnotation('annot1', user1.id)
-        annot2 = ModeratedAnnotation('annot2', user1.id)
-        annot3 = ModeratedAnnotation('annot3', user3.id)
+        annot1 = ModeratedAnnotation('annot1', user1)
+        annot2 = ModeratedAnnotation('annot2', user1)
+        annot3 = ModeratedAnnotation('annot3', user3)
         session.add(annot1)
         session.add(annot2)
         session.add(annot3)
@@ -102,6 +102,12 @@ class TestSpamFlag(unittest.TestCase):
         mnrd.raise_ham_flag(annot3, user1, session)
         self.assertTrue(annot3.sk_weight > 0)
         self.assertTrue(user1.sk_reliab > 0 and user1.sk_reliab < val)
+
+        # Testing karma user.
+        annot4 = ModeratedAnnotation('annot4', user1)
+        session.add(annot4)
+        session.flush()
+        self.assertTrue(annot4.sk_weight > 0)
 
 
 if __name__ == '__main__':

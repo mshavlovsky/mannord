@@ -8,7 +8,7 @@ import graph_d as gd
 # We can listen to a new user by assigning small positive reliability by default
 # As for now, a new user has some trust.
 
-class TestKargerVanilla(unittest.TestCase):
+class TestDirichletVanilla(unittest.TestCase):
 
     def test_single_action(self):
         g = gd.Graph()
