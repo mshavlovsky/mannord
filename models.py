@@ -2,11 +2,14 @@ from sqlalchemy import (Column, Integer, Float, String, Boolean,
                         ForeignKey, DateTime, Sequence, and_)
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.declarative import declared_attr
+from spam_detection_mixins import (UserDirichletMixin, ItemDirichletMixin,
+                                   ActionDirichletMixin, UserKargerMixin,
+                                   ItemKargerMixin, ActionKargerMixin)
 import graph_k as gk
 import graph_d as gd
 
 
-# todo(michael): there is an issue when using foreign keys.
+# note(michael): there is an issue when using foreign keys.
 # We don't know tables' and classes' names of tables.
 # For now I use global constants to keep these names, if that okay then
 # it makes sence to move constants into a config file.
@@ -18,6 +21,9 @@ ITEM_TABLE_ID_FIELD = 'annotation.id'
 ITEM_CLASS_NAME = 'ModeratedAnnotation'
 ITEM_TABLE_NAME = 'annotation'
 ACTION_TABLE_NAME = 'action'
+ACTION_TABLE_NAME_ID_FIELD = 'action.id'
+ACTION_CLASS_NAME = "Action"
+
 
 ACTION_UPVOTE = 'upvote'
 ACTION_DOWNVOTE = 'downvote'
@@ -37,7 +43,7 @@ COMPUTATION_SK_NAME = "spam_detection_karger"
 # is spammer or not. If it has negative reliability then the user is spammer.
 
 
-class UserMixin(object):
+class UserMixin(UserDirichletMixin, UserKargerMixin, object):
 
     cls = None
 
@@ -49,83 +55,9 @@ class UserMixin(object):
     def is_spammer(cls):
         return Column(Boolean, default=False)
 
-    # Fields related to spam detection using Karger's algorithm (sk_ prefix)
-    @declared_attr
-    def sk_base_reliab(cls):
-        """ This field is a base raliability of a user for spam detection task.
-        """
-        return Column(Float, default=0)
 
-    @declared_attr
-    def sk_reliab(cls):
-        """ Spam detection reliability"""
-        return Column(Float, default=0)
-
-    @declared_attr
-    def sk_reliab_raw(cls):
-        """ Raw reliability is user's reliability before applying asymptotic
-        function or normalization. We need it to perform online update.
-        """
-        return Column(Float, default=0)
-
-    @declared_attr
-    def sk_karma_user_base_reliab(cls):
-        """ This field is a base reliability for a karma user ("null" user) who
-        always votes positively for the user's annotation."""
-        return Column(Float, default=0)
-
-    @declared_attr
-    def sk_karma_user_reliab(cls):
-        return Column(Float, default=0)
-
-    # Fields related to spam detection using Dirichlet distribution (sd_ prefix)
-
-    @declared_attr
-    def sd_base_u_n(cls):
-        return Column(Float, default=0)
-
-    @declared_attr
-    def sd_base_u_p(cls):
-        return Column(Float, default=0)
-
-    @declared_attr
-    def sd_reliab(cls):
-        """ Spam detection reliability is computed based on u_n and u_p."""
-        return Column(Float, default=0)
-
-    @declared_attr
-    def sd_u_n(cls):
-        return Column(Float, default=0)
-
-    @declared_attr
-    def sd_u_p(cls):
-        return Column(Float, default=0)
-
-    @declared_attr
-    def sd_karma_user_base_u_n(cls):
-        return Column(Float, default=0)
-
-    @declared_attr
-    def sd_karma_user_base_u_p(cls):
-        return Column(Float, default=0)
-
-    @declared_attr
-    def sd_karma_user_reliab(cls):
-        """ Spam detection reliability"""
-        return Column(Float, default=0)
-
-    @declared_attr
-    def sd_karma_user_u_n(cls):
-        return Column(Float, default=0)
-
-    @declared_attr
-    def sd_karma_user_u_p(cls):
-        return Column(Float, default=0)
-
-
-class ItemMixin(object):
-    """ Item is an object like annotation, post, etc. Moderation actions
-    are perfored on items.
+class ItemMixin(ItemDirichletMixin, ItemKargerMixin, object):
+    """ Item is an object like annotation, post, etc.
     """
 
     __tablename__ = ITEM_TABLE_NAME
@@ -135,14 +67,6 @@ class ItemMixin(object):
     def id(cls):
         return Column(String(STRING_FIELD_LENGTH), primary_key=True)
 
-    @declared_attr
-    def parent_id(cls):
-        return Column(String(STRING_FIELD_LENGTH), ForeignKey(ITEM_TABLE_ID_FIELD))
-
-    @declared_attr
-    def parent(cls):
-        return relationship(ITEM_CLASS_NAME)
-
     # Authors's id
     @declared_attr
     def author_id(cls):
@@ -151,6 +75,26 @@ class ItemMixin(object):
     @declared_attr
     def author(cls):
         return relationship(USER_CLASS_NAME)
+
+#    # Defines parent-children relation between items.
+#    @declared_attr
+#    def parent_id(cls):
+#        return Column(String(STRING_FIELD_LENGTH), ForeignKey(ITEM_TABLE_ID_FIELD))
+#
+#    @declared_attr
+#    def children(cls):
+#        return relationship(ITEM_CLASS_NAME,
+#                            backref=backref('parent', remote_side=[id]))
+#
+
+#    # Defines an action which is twin to an item.
+#    @declared_attr
+#    def twin_action_id(cls):
+#        return Column(Integer, ForeignKey(ACTION_TABLE_NAME_ID_FIELD))
+
+#    @declared_attr
+#    def action_twin(cls):
+#        return relationship(ACTION_CLASS_NAME, uselist=False)
 
     @declared_attr
     def is_spam(cls):
@@ -163,57 +107,6 @@ class ItemMixin(object):
     @declared_attr
     def spam_flag_counter(cls):
         return Column(Integer, default=0)
-
-    @declared_attr
-    def marked_for_mm(cls, default=False):
-        """If the filed is true then the item is marked for metamoderation."""
-        return Column(Boolean, default=False)
-
-    # Fields related to spam detection using Karger's algorithm (sk_ prefix)
-    @declared_attr
-    def sk_weight(cls):
-        """ weight_spam_k is a weight of an item wich computed in Karger's
-        algorithm. Negative weight indicates spam.
-        """
-        return Column(Float, default=0)
-
-    @declared_attr
-    def sk_frozen(cls):
-        return Column(Boolean, default=False)
-
-    @classmethod
-    def sk_get_items_offline_spam_detect(cls, session):
-        items = session.query(cls).filter(
-                     cls.sk_frozen == False).all()
-        return items
-
-    @declared_attr
-    def sd_c_n(cls):
-        """ 'Number' of negative votes for the item"""
-        return Column(Float, default=0)
-
-    @declared_attr
-    def sd_c_p(cls):
-        """ 'Number' of positive votes for the item"""
-        return Column(Float, default=0)
-
-    @declared_attr
-    def sd_weight(cls):
-        """ weight_spam_k is a weight of an item wich computed in Karger's
-        algorithm. Negative weight indicates spam.
-        """
-        return Column(Float)
-
-    # Fields related to spam detection using Dirichlet distribution (sd_ prefix)
-    @declared_attr
-    def sd_frozen(cls):
-        return Column(Boolean, default=False)
-
-    @classmethod
-    def sd_get_items_offline_spam_detect(cls, session):
-        items = session.query(cls).filter(
-                     cls.sd_frozen == False).all()
-        return items
 
     @classmethod
     def get_add_item(cls, item_id, user, session):
@@ -257,7 +150,7 @@ class ItemMixin(object):
         return '<Item %s>' % self.id
 
 
-class ActionMixin(object):
+class ActionMixin(ActionDirichletMixin, ActionKargerMixin, object):
     # todo(michael): some annotation correspond to action. We need to take care
     # of it.
 
@@ -286,21 +179,24 @@ class ActionMixin(object):
 
     @declared_attr
     def item(cls):
-        return relationship(ITEM_CLASS_NAME)
+        """ Item on which the action was performed."""
+        item_id = "%s.item_id" % ACTION_CLASS_NAME
+        return relationship(ITEM_CLASS_NAME, foreign_keys=item_id)
 
-    #@declared_attr
-    #def action_item_id(cls):
-    #    """Action item  is an item which corresponds to the action.
-    #    For example, if an annotation is a vote with explanation then
-    #    the vote action has link to the annotation through action_item.
-    #    """
-    #    return Column(Integer, ForeignKey(ITEM_TABLE_ID_FIELD))
+#    # Configuring item which is twin to an action
+#    @declared_attr
+#    def item_twin_id(cls):
+#        return Column(Integer, ForeignKey(USER_TABLE_ID_FIELD))
+#
+#    @declared_attr
+#    def item_twin(cls):
+#        """ Some items can be iterpreted as action.
+#        item_twin is an item which corresponds to the action."""
+#        item_twin_id = "%s.item_twin_id" % ACTION_CLASS_NAME
+#        return relationship(ITEM_CLASS_NAME, uselist=False,
+#                            foreign_keys=item_twin_id)
+#
 
-    #@declared_attr
-    #def action_item(cls):
-    #    # todo(michael): there are two links to item table:item and action_item
-    #    # solve ambiguity in sqlalchemy
-    #    return relationship(ITEM_CLASS_NAME)
 
     # Action type: upvote, downvote, flag spam ... .
     @declared_attr
@@ -323,47 +219,23 @@ class ActionMixin(object):
                                     cls.type == action_type)).first()
         return action
 
-    # Fields related to spam detection using Karger's algorithm (sk_ prefix)
-    @declared_attr
-    def sk_frozen(cls):
-        """ If the field is true, then the action does not participate in
-        offline spam detection."""
-        return Column(Boolean, default=False)
-
-    @classmethod
-    def sk_get_actions_offline_spam_detect(cls, session):
-        actions = session.query(cls).filter(
-                     cls.sk_frozen == False).all()
-        return actions
-
-    # Fields related to spam detection using Dirichlet distribution (sd_ prefix)
-    @declared_attr
-    def sd_frozen(cls):
-        """ If the field is true, then the action participate in offline spam
-        detection."""
-        return Column(Boolean, default=False)
-
-    @classmethod
-    def sd_get_actions_offline_spam_detect(cls, session):
-        actions = session.query(cls).filter(
-                     cls.sd_frozen == False).all()
-        return actions
-
     @classmethod
     def add_action(cls, item_id, user_id, action_type, value,
-                   timestamp, session):
-        action = cls(item_id, user_id, action_type, value, timestamp)
+                   timestamp, session, item_twin_id=None):
+        action = cls(item_id, user_id, action_type, value, timestamp,
+                                                    item_twin_id = item_twin_id)
         session.add(action)
         session.flush()
 
 
-    # todo(michael): I assume that a class which inherits this mixin
+    # note(michael): I assume that a class which inherits this mixin
     # will call next constructor.
-    def __init__(self, item_id, user_id, action_type, timestamp):
+    def __init__(self, item_id, user_id, action_type, timestamp, item_twin_id=None):
         self.item_id = item_id
         self.user_id = user_id
         self.type = action_type
         self.timestamp = timestamp
+        self.item_twin_id = item_twin_id
 
     def __repr__(self):
         return '<Action of user %s on item %s, type %s>' % (self.user_id,
