@@ -174,7 +174,7 @@ class ActionMixin(ActionDirichletMixin, ActionKargerMixin, object):
     # Configuring item which is twin to an action
     @declared_attr
     def item_twin_id(cls):
-        return Column(Integer, ForeignKey(ITEM_TABLE_ID_FIELD))
+        return Column(String(STRING_FIELD_LENGTH), ForeignKey(ITEM_TABLE_ID_FIELD))
 
     @declared_attr
     def item_twin(cls):
@@ -184,8 +184,6 @@ class ActionMixin(ActionDirichletMixin, ActionKargerMixin, object):
         return relationship(ITEM_CLASS_NAME,
                             backref=backref('action_twin', uselist=False),
                             foreign_keys=item_twin_id)
-
-
 
     # Action type: upvote, downvote, flag spam ... .
     @declared_attr
@@ -224,6 +222,9 @@ class ActionMixin(ActionDirichletMixin, ActionKargerMixin, object):
         self.user_id = user_id
         self.type = action_type
         self.timestamp = timestamp
+        # item_id and item_twin_id cannot coinside
+        if item_id == item_twin_id:
+            raise Exception("C'mon, an action cannot be performed on an item which represents the action!!!")
         self.item_twin_id = item_twin_id
 
     def __repr__(self):

@@ -19,9 +19,10 @@ def bind_engine(engine, session, base, should_create=True):
         base.metadata.create_all(engine)
 
 
-def bootstrap(base, engine, session):
+def bootstrap(base, engine, session, add_computation_record=True):
     class Computation(ComputationMixin, base):
         pass
+
     class Action(ActionMixin, base):
         pass
 
@@ -29,14 +30,21 @@ def bootstrap(base, engine, session):
         pass
 
     base.metadata.create_all(engine)
-
-    session.add(Computation(COMPUTATION_SK_NAME))
-    session.flush()
+    if add_computation_record:
+        session.add(Computation(COMPUTATION_SK_NAME))
+        session.flush()
 
     ActionMixin.cls = Action
     ItemMixin.cls = ModeratedAnnotation
     ComputationMixin.cls = Computation
 
+
+def add_computation_record(base, engine, session):
+        if not ComputationMixin.cls is None:
+            session.add(ComputationMixin.cls(COMPUTATION_SK_NAME))
+        else:
+            raise Exception("Mannord has not been bootrstraped!")
+        session.flush()
 
 def name_check(algo_name):
     if algo_name != ALGO_NAME_KARGER and algo_name != ALGO_NAME_DIRICHLET:
@@ -81,4 +89,3 @@ def raise_ham_flag(item, user, session, algo_name=ALGO_NAME_KARGER):
         sdk.flag_ham(item, user, timestamp, session)
     else:
         sdd.flag_ham(item, user, timestamp, session)
-        pass
