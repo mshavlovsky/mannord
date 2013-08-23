@@ -76,25 +76,17 @@ class ItemMixin(ItemDirichletMixin, ItemKargerMixin, object):
     def author(cls):
         return relationship(USER_CLASS_NAME)
 
-#    # Defines parent-children relation between items.
-#    @declared_attr
-#    def parent_id(cls):
-#        return Column(String(STRING_FIELD_LENGTH), ForeignKey(ITEM_TABLE_ID_FIELD))
-#
-#    @declared_attr
-#    def children(cls):
-#        return relationship(ITEM_CLASS_NAME,
-#                            backref=backref('parent', remote_side=[id]))
-#
+    # Defines parent-children relation between items.
+    @declared_attr
+    def parent_id(cls):
+        return Column(String(STRING_FIELD_LENGTH), ForeignKey(ITEM_TABLE_ID_FIELD))
 
-#    # Defines an action which is twin to an item.
-#    @declared_attr
-#    def twin_action_id(cls):
-#        return Column(Integer, ForeignKey(ACTION_TABLE_NAME_ID_FIELD))
+    @declared_attr
+    def children(cls):
+        id = "%s.id" % ITEM_CLASS_NAME
+        return relationship(ITEM_CLASS_NAME,
+                            backref=backref('parent', remote_side=id))
 
-#    @declared_attr
-#    def action_twin(cls):
-#        return relationship(ACTION_CLASS_NAME, uselist=False)
 
     @declared_attr
     def is_spam(cls):
@@ -132,10 +124,7 @@ class ItemMixin(ItemDirichletMixin, ItemKargerMixin, object):
         session.flush()
         return annot
 
-    # todo(michiael): If ItemMixin will be used to add tables columns to
-    # wider item class, then we need act in the same way as with
-    # User table.
-    def __init__(self, item_id, user):
+    def __init__(self, item_id, user, parent_id=None):
         self.id = item_id
         self.author_id = user.id
         val = user.sk_karma_user_reliab * gk.KARMA_USER_VOTE
@@ -144,6 +133,7 @@ class ItemMixin(ItemDirichletMixin, ItemKargerMixin, object):
         u_n = user.sd_karma_user_u_n
         u_p = user.sd_karma_user_u_p
         self.sd_weight = gd.get_item_weight(u_n, u_p)
+        self.parent_id = parent_id
 
 
     def __repr__(self):
@@ -151,8 +141,6 @@ class ItemMixin(ItemDirichletMixin, ItemKargerMixin, object):
 
 
 class ActionMixin(ActionDirichletMixin, ActionKargerMixin, object):
-    # todo(michael): some annotation correspond to action. We need to take care
-    # of it.
 
     __tablename__ = ACTION_TABLE_NAME
     cls = None
@@ -183,19 +171,20 @@ class ActionMixin(ActionDirichletMixin, ActionKargerMixin, object):
         item_id = "%s.item_id" % ACTION_CLASS_NAME
         return relationship(ITEM_CLASS_NAME, foreign_keys=item_id)
 
-#    # Configuring item which is twin to an action
-#    @declared_attr
-#    def item_twin_id(cls):
-#        return Column(Integer, ForeignKey(USER_TABLE_ID_FIELD))
-#
-#    @declared_attr
-#    def item_twin(cls):
-#        """ Some items can be iterpreted as action.
-#        item_twin is an item which corresponds to the action."""
-#        item_twin_id = "%s.item_twin_id" % ACTION_CLASS_NAME
-#        return relationship(ITEM_CLASS_NAME, uselist=False,
-#                            foreign_keys=item_twin_id)
-#
+    # Configuring item which is twin to an action
+    @declared_attr
+    def item_twin_id(cls):
+        return Column(Integer, ForeignKey(ITEM_TABLE_ID_FIELD))
+
+    @declared_attr
+    def item_twin(cls):
+        """ Some items can be iterpreted as action.
+        item_twin is an item which corresponds to the action."""
+        item_twin_id = "%s.item_twin_id" % ACTION_CLASS_NAME
+        return relationship(ITEM_CLASS_NAME,
+                            backref=backref('action_twin', uselist=False),
+                            foreign_keys=item_twin_id)
+
 
 
     # Action type: upvote, downvote, flag spam ... .
