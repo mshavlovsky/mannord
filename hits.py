@@ -1,4 +1,6 @@
+# Classic hits algorithm.
 import numpy as np
+
 
 
 class Item(object):
@@ -87,3 +89,19 @@ class Graph(object):
             norm = norm ** 0.5
             for u in self.users:
                 u.hub_weight /= norm
+
+
+    def get_n_top_users(self, n, author_id):
+        """ Returns top n users exclusive the author."""
+        l = [(user.hub_weight, user.id) for user in self.users if user.id != author_id]
+        # Sorting tuples from largest to smalles based on the first number.
+        l.sort(reverse=True)
+        n_users = [l[i][1] for i in xrange(min(n, len(l)))]
+        return n_users
+
+
+    def get_n_top_items(self, n):
+        l = [(item.auth_weight, item.id) for item in self.items]
+        l.sort(reverse=True)
+        n_items = [l[i][1] for i in xrange(min(n, len(l)))]
+        return n_items

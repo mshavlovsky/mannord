@@ -55,9 +55,9 @@ class TestSpamFlag(unittest.TestCase):
         session.add(user2)
         session.add(user3)
         session.flush()
-        annot1 = ModeratedAnnotation('annot1', user1)
-        annot2 = ModeratedAnnotation('annot2', user1)
-        annot3 = ModeratedAnnotation('annot3', user3)
+        annot1 = ModeratedAnnotation('www.example.com', 'annot1', user1)
+        annot2 = ModeratedAnnotation('www.example.com', 'annot2', user1)
+        annot3 = ModeratedAnnotation('www.example.com', 'annot3', user3)
         session.add(annot1)
         session.add(annot2)
         session.add(annot3)
@@ -106,7 +106,7 @@ class TestSpamFlag(unittest.TestCase):
         self.assertTrue(user1.sd_reliab > th and user1.sd_reliab < val)
 
         # Testing karma user.
-        annot4 = ModeratedAnnotation('annot4', user1)
+        annot4 = ModeratedAnnotation('www.example.com', 'annot4', user1)
         session.add(annot4)
         session.flush()
         self.assertTrue(annot4.sd_weight > th)

@@ -76,6 +76,11 @@ class ItemMixin(ItemDirichletMixin, ItemKargerMixin, object):
     def author(cls):
         return relationship(USER_CLASS_NAME)
 
+    @declared_attr
+    def page_url(cls):
+        """ page_url is an url of a page where annotation is left."""
+        return Column(String(STRING_FIELD_LENGTH))
+
     # Defines parent-children relation between items.
     @declared_attr
     def parent_id(cls):
@@ -116,6 +121,14 @@ class ItemMixin(ItemDirichletMixin, ItemKargerMixin, object):
         return annot
 
     @classmethod
+    def get_items_on_page(cls, page_url, session):
+        return session.query(cls).filter_by(page_url = page_url).all()
+
+    @classmethod
+    def get_items_by_author(cls, user_id, session):
+        return session.query(cls).filter_by(author_id = user_id).all()
+
+    @classmethod
     def add_item(cls, item_id, user, session):
         # todo(michael): add item's parent, if exist. Also check initializations
         # of fields related to sd_ and sk_.
@@ -124,7 +137,8 @@ class ItemMixin(ItemDirichletMixin, ItemKargerMixin, object):
         session.flush()
         return annot
 
-    def __init__(self, item_id, user, parent_id=None):
+    def __init__(self, source, item_id, user, parent_id=None):
+        self.source = source
         self.id = item_id
         self.author_id = user.id
         val = user.sk_karma_user_reliab * gk.KARMA_USER_VOTE
@@ -206,6 +220,7 @@ class ActionMixin(ActionDirichletMixin, ActionKargerMixin, object):
                                     cls.type == action_type)).first()
         return action
 
+
     @classmethod
     def add_action(cls, item_id, user_id, action_type, value,
                    timestamp, session, item_twin_id=None):
@@ -213,6 +228,16 @@ class ActionMixin(ActionDirichletMixin, ActionKargerMixin, object):
                                                     item_twin_id = item_twin_id)
         session.add(action)
         session.flush()
+
+    @classmethod
+    def get_actions_on_item(cls, item_id, session):
+        actions = session.query(cls).filter(cls.item_id == item_id).all()
+        return actions
+
+    @classmethod
+    def get_actions_by_user(cls, user_id, session):
+        actions = session.query(cls).filter(cls.user_id == user_id).all()
+        return actions
 
 
     # note(michael): I assume that a class which inherits this mixin

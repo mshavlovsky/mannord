@@ -61,10 +61,13 @@ class TestSpamFlag(unittest.TestCase):
         session.flush()
 
         # Testin parent-child relationship
-        annot1 = ModeratedAnnotation('annot1', user1)
-        annot2 = ModeratedAnnotation('annot2', user1, parent_id='annot1')
-        annot3 = ModeratedAnnotation('annot3', user2, parent_id='annot1')
-        annot4 = ModeratedAnnotation('annot4', user2, parent_id='annot2')
+        annot1 = ModeratedAnnotation('www.example.com', 'annot1', user1)
+        annot2 = ModeratedAnnotation('www.example.com', 'annot2', user1,
+                                      parent_id='annot1')
+        annot3 = ModeratedAnnotation('www.example.com', 'annot3', user2,
+                                     parent_id='annot1')
+        annot4 = ModeratedAnnotation('www.example.com', 'annot4', user2,
+                                     parent_id='annot2')
         session.add_all([annot1, annot2, annot3, annot4])
         session.flush()
 
@@ -79,76 +82,6 @@ class TestSpamFlag(unittest.TestCase):
         session.flush()
         self.assertTrue(upvote.item_twin.id == annot2.id)
         self.assertTrue(annot2.action_twin.id == upvote.id)
-
-
-
-    def test_spam_flag_karger(self):
-        recreate_tables()
-        mnrd.add_computation_record(Base, engine, session)
-        ModeratedAnnotation = ItemMixin.cls
-
-        # Creates users and annotations
-        user1 = User()
-        user2 = User()
-        user3 = User()
-        session.add_all([user1, user2, user3])
-        session.flush()
-        annot1 = ModeratedAnnotation('annot1', user1)
-        annot2 = ModeratedAnnotation('annot2', user1)
-        annot3 = ModeratedAnnotation('annot3', user3)
-        session.add_all([annot1, annot2, annot3])
-        session.flush()
-
-        # Adds a flag and deletes it.
-        mnrd.raise_spam_flag(annot1, user2, session)
-        mnrd.raise_spam_flag(annot1, user2, session)
-        self.assertTrue(annot1.spam_flag_counter == 1)
-        mnrd.run_offline_spam_detection('karger', session)
-        self.assertTrue(annot1.sk_weight < 0)
-        mnrd.raise_ham_flag(annot1, user2, session)
-        mnrd.raise_ham_flag(annot1, user2, session)
-        mnrd.run_offline_spam_detection('karger', session)
-        self.assertTrue(annot1.spam_flag_counter == 0)
-        self.assertTrue(annot1.sk_weight > 0)
-
-        # Adds four flags
-        mnrd.raise_spam_flag(annot1, user2, session)
-        mnrd.raise_spam_flag(annot1, user1, session)
-        mnrd.raise_spam_flag(annot2, user2, session)
-        mnrd.raise_spam_flag(annot2, user1, session)
-
-        mnrd.run_offline_spam_detection('karger', session)
-        self.assertTrue(annot1.spam_flag_counter == 2)
-        self.assertTrue(annot1.sk_weight < 0)
-        self.assertTrue(user1.sk_karma_user_reliab < 0)
-        self.assertTrue(user1.sk_reliab > 0)
-        self.assertTrue(user1.sk_base_reliab == 0)
-
-        # Changing spam to ham
-        mnrd.raise_ham_flag(annot1, user2, session)
-        mnrd.raise_ham_flag(annot1, user1, session)
-        mnrd.raise_ham_flag(annot2, user2, session)
-        mnrd.raise_ham_flag(annot2, user1, session)
-        mnrd.run_offline_spam_detection('karger', session)
-        self.assertTrue(annot1.spam_flag_counter == 0)
-        self.assertTrue(annot1.sk_weight > 0)
-        self.assertTrue(user1.sk_karma_user_reliab > 0)
-
-        # Testing one online update.
-        mnrd.raise_spam_flag(annot3, user1, session)
-        val = user1.sk_reliab
-        self.assertTrue(annot3.sk_weight < 0)
-        mnrd.raise_ham_flag(annot3, user1, session)
-        self.assertTrue(annot3.sk_weight > 0)
-        self.assertTrue(user1.sk_reliab > 0 and user1.sk_reliab < val)
-
-        # Testing karma user.
-        annot4 = ModeratedAnnotation('annot4', user1)
-        session.add(annot4)
-        session.flush()
-        self.assertTrue(annot4.sk_weight > 0)
-
-        Base.metadata.drop_all()
 
 
 if __name__ == '__main__':
