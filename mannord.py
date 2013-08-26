@@ -7,6 +7,7 @@ from models import (ActionMixin, UserMixin, ItemMixin, ComputationMixin,
 
 import spam_detection_karger as sdk
 import spam_detection_dirichlet as sdd
+import hitsDB
 
 ALGO_NAME_KARGER = 'karger'
 ALGO_NAME_DIRICHLET = 'dirichlet'
@@ -89,3 +90,13 @@ def raise_ham_flag(item, user, session, algo_name=ALGO_NAME_KARGER):
         sdk.flag_ham(item, user, timestamp, session)
     else:
         sdd.flag_ham(item, user, timestamp, session)
+
+
+def suggest_n_users_to_review(item, n, session):
+    if item is None or item.page_url is None:
+        return []
+    n_users = hitsDB.suggest_n_users_to_review(item, n, session)
+    if len(n_users) < n:
+        # todo(michael): do random sampling (or some criteria)
+        pass
+    return n_users

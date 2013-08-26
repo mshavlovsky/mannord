@@ -137,8 +137,8 @@ class ItemMixin(ItemDirichletMixin, ItemKargerMixin, object):
         session.flush()
         return annot
 
-    def __init__(self, source, item_id, user, parent_id=None):
-        self.source = source
+    def __init__(self, page_url, item_id, user, parent_id=None):
+        self.page_url = page_url
         self.id = item_id
         self.author_id = user.id
         val = user.sk_karma_user_reliab * gk.KARMA_USER_VOTE
