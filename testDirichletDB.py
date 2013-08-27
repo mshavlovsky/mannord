@@ -7,6 +7,7 @@ from sqlalchemy import create_engine
 import unittest
 
 from models import (ItemMixin, UserMixin, ActionMixin)
+import spam_utils as su
 import mannord as mnrd
 import graph_d as gd
 
@@ -55,9 +56,12 @@ class TestSpamFlag(unittest.TestCase):
         session.add(user2)
         session.add(user3)
         session.flush()
-        annot1 = ModeratedAnnotation('www.example.com', 'annot1', user1)
-        annot2 = ModeratedAnnotation('www.example.com', 'annot2', user1)
-        annot3 = ModeratedAnnotation('www.example.com', 'annot3', user3)
+        annot1 = ModeratedAnnotation('www.example.com', 'annot1', user1,
+                                     spam_detect_algo=su.ALGO_DIRICHLET)
+        annot2 = ModeratedAnnotation('www.example.com', 'annot2', user1,
+                                     spam_detect_algo=su.ALGO_DIRICHLET)
+        annot3 = ModeratedAnnotation('www.example.com', 'annot3', user3,
+                                     spam_detect_algo=su.ALGO_DIRICHLET)
         session.add(annot1)
         session.add(annot2)
         session.add(annot3)
@@ -106,10 +110,14 @@ class TestSpamFlag(unittest.TestCase):
         self.assertTrue(user1.sd_reliab > th and user1.sd_reliab < val)
 
         # Testing karma user.
-        annot4 = ModeratedAnnotation('www.example.com', 'annot4', user1)
+        annot4 = ModeratedAnnotation('www.example.com', 'annot4', user1,
+                                     spam_detect_algo=su.ALGO_DIRICHLET)
         session.add(annot4)
         session.flush()
         self.assertTrue(annot4.sd_weight > th)
+        
+        items = mnrd.get_n_items_for_spam_mm_randomly(2, session)
+        print 'items for spam metamoderation', items
 
 
 if __name__ == '__main__':

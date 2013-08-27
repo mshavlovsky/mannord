@@ -5,12 +5,10 @@ from models import (ActionMixin, UserMixin, ItemMixin, ComputationMixin,
                     COMPUTATION_SK_NAME)
 
 
+import spam_utils as su
 import spam_detection_karger as sdk
 import spam_detection_dirichlet as sdd
 import hitsDB
-
-ALGO_NAME_KARGER = 'karger'
-ALGO_NAME_DIRICHLET = 'dirichlet'
 
 
 def bind_engine(engine, session, base, should_create=True):
@@ -48,7 +46,7 @@ def add_computation_record(base, engine, session):
         session.flush()
 
 def name_check(algo_name):
-    if algo_name != ALGO_NAME_KARGER and algo_name != ALGO_NAME_DIRICHLET:
+    if algo_name != su.ALGO_KARGER and algo_name != su.ALGO_DIRICHLET:
         raise Exception("Unknown algorithm !")
 
 
@@ -65,7 +63,7 @@ def run_offline_spam_detection(algo_name, session):
     name_check(algo_name)
     bootstrap_check()
     # Obtains class names to perform db querries later.
-    if algo_name == ALGO_NAME_KARGER:
+    if algo_name == su.ALGO_KARGER:
         sdk.run_offline_computations(session)
     else:
         sdd.run_offline_computations(session)
@@ -73,20 +71,19 @@ def run_offline_spam_detection(algo_name, session):
     session.flush()
 
 
-def raise_spam_flag(item, user, session, algo_name=ALGO_NAME_KARGER):
+def raise_spam_flag(item, user, session, algo_name=su.ALGO_KARGER):
     timestamp = datetime.utcnow()
     bootstrap_check()
-    if algo_name == ALGO_NAME_KARGER:
+    if algo_name == su.ALGO_KARGER:
         sdk.flag_spam(item, user, timestamp, session)
     else:
         sdd.flag_spam(item, user, timestamp, session)
-        pass
 
 
-def raise_ham_flag(item, user, session, algo_name=ALGO_NAME_KARGER):
+def raise_ham_flag(item, user, session, algo_name=su.ALGO_KARGER):
     timestamp = datetime.utcnow()
     bootstrap_check()
-    if algo_name == ALGO_NAME_KARGER:
+    if algo_name == su.ALGO_KARGER:
         sdk.flag_ham(item, user, timestamp, session)
     else:
         sdd.flag_ham(item, user, timestamp, session)
@@ -100,3 +97,7 @@ def suggest_n_users_to_review(item, n, session):
         # todo(michael): do random sampling (or some criteria)
         pass
     return n_users
+
+
+def get_n_items_for_spam_mm_randomly(n, session):
+   return ItemMixin.cls.get_n_items_for_spam_mm_randomly(n, session)

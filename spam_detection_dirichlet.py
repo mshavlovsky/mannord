@@ -3,13 +3,12 @@ from models import (ActionMixin, UserMixin, ItemMixin,
                     ACTION_FLAG_SPAM, ACTION_FLAG_HAM,
                     ACTION_UPVOTE, ACTION_DOWNVOTE)
 
+import spam_utils as su
 import graph_d as gd
 
 K_MAX = 10
 KARMA_USER_VOTE = 0.5
 
-THRESHOLD_SPAM = -0.2
-THRESHOLD_HAM = 0.8
 THRESHOLD_DEFINITELY_SPAM = - np.inf
 THRESHOLD_DEFINITELY_HAM = np.inf
 BASE_SPAM_INCREMENT = 10
@@ -67,17 +66,12 @@ def _from_graph_to_db(graph, items, actions):
         u.sd_reliab = user_d.reliability
     # Detects and mark frozen items. Fills items' fileds.
     for it in items:
-        it.is_spam = False
-        it.is_ham = False
         it.sd_frozen = False
         # item_d represents item "it" in the algorithm, it contains spam info.
         item_d = graph.get_item(it.id)
         it.sd_weight = item_d.weight
-        # Marks spam and ham
-        if it.sk_weight < THRESHOLD_SPAM:
-            it.is_spam = True
-        if it.sk_weight > THRESHOLD_HAM:
-            it.is_ham = True
+        # Marks spam, ham, or marks for metamoderation.
+        su.mark_spam_ham_or_mm(it, algo_type=su.ALGO_DIRICHLET)
         # Marks off items actions from offline computation
         if (it.sk_weight > THRESHOLD_DEFINITELY_HAM or
             it.sk_weight < THRESHOLD_DEFINITELY_SPAM):
@@ -192,6 +186,8 @@ def _raise_spam_ham_flag_fresh(item, user, timestamp, session, spam_flag=True):
     user.sd_u_n += neg
     user.sd_u_p += pos
     user.sd_reliab = gd.get_reliability(user.sd_u_n, user.sd_u_p)
+    # Marks the item as spam or ham, or marks for metamoderation.
+    su.mark_spam_ham_or_mm(item, algo_type=su.ALGO_DIRICHLET)
     session.flush()
 
 
@@ -219,6 +215,8 @@ def _undo_spam_ham_flag(item, user, session, spam_flag=False):
     user.sd_u_n -= neg
     user.sd_u_p -= pos
     user.sd_reliab = gd.get_reliability(user.sd_u_n, user.sd_u_p)
+    # Marks the item as spam or ham, or marks for metamoderation.
+    su.mark_spam_ham_or_mm(item, algo_type=su.ALGO_DIRICHLET)
     session.flush()
 
 

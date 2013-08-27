@@ -4,13 +4,12 @@ from models import (ActionMixin, UserMixin, ItemMixin,
                     ACTION_FLAG_SPAM, ACTION_FLAG_HAM,
                     ACTION_UPVOTE, ACTION_DOWNVOTE)
 
+import spam_utils as su
 import graph_k as gk
 
 
 # todo(michael): tune parameters
 K_MAX = 10
-THRESHOLD_SPAM = -1
-THRESHOLD_HAM = 5
 # If weight of an item is less than ..._DEFINITELY_SPAM then annotation is
 # excluded from offline computations, similarly for  ..._DEFINITELY_HAM
 THRESHOLD_DEFINITELY_SPAM = - np.inf
@@ -18,7 +17,6 @@ THRESHOLD_DEFINITELY_HAM = np.inf
 # Increment for base reliability, user's base reliability changes
 # by this amound every time he make an action on an spam/ham annotation.
 BASE_SPAM_INCREMENT = 1
-BASE_SPAM_ = 1
 
 
 def run_offline_computations(session):
@@ -66,11 +64,10 @@ def _add_spam_info_to_graph_k(graph, items, actions):
                 base_reliability = act.user.sk_base_reliab)
         else:
             # The action does not related to vandalizm detection, so ignore it.
-            # todo(michael): make sure that after flush() the action is unmarked
             act.sk_frozen = True
             continue
     for it in items:
-        # Creates karma user (old "null" user)
+        # Creates karma user.
         graph.add_answer(-it.author.id, it.id, gk.KARMA_USER_VOTE,
                    base_reliability = it.author.sk_karma_user_base_reliab)
 
@@ -85,17 +82,12 @@ def _from_graph_to_db(graph, items, actions, computation):
         u.sk_reliab = user_k.reliability
     # Detects and mark frozen items. Fills items' fileds.
     for it in items:
-        it.is_spam = False
-        it.is_ham = False
         it.sk_frozen = False
         # item_k represents item "it" in the algorithm, it contains spam info.
         item_k = graph.get_item(it.id)
         it.sk_weight = item_k.weight
-        # Marks spam and ham
-        if it.sk_weight < THRESHOLD_SPAM:
-            it.is_spam = True
-        if it.sk_weight > THRESHOLD_HAM:
-            it.is_ham = True
+        # Marks spam, ham, or marks for metamoderation.
+        su.mark_spam_ham_or_mm(it, algo_type=su.ALGO_KARGER)
         # Marks off items actions from offline computation
         if (it.sk_weight > THRESHOLD_DEFINITELY_HAM or
             it.sk_weight < THRESHOLD_DEFINITELY_SPAM):
@@ -196,6 +188,8 @@ def _undo_spam_ham_flag(item, user, session, spam_flag=True):
     # Normalization!
     comp = ComputationMixin.cls.get(COMPUTATION_SK_NAME, session)
     user.sk_reliab /= comp.normalization
+    # Marks the item as spam or ham, or marks for metamoderation.
+    su.mark_spam_ham_or_mm(item, algo_type=su.ALGO_KARGER)
     session.flush()
 
 
@@ -237,7 +231,10 @@ def _raise_spam_ham_flag_fresh(item, user, timestamp,
     # Normalization!
     comp = ComputationMixin.cls.get(COMPUTATION_SK_NAME, session)
     user.sk_reliab /= comp.normalization
+    # Marks the item as spam or ham, or marks for metamoderation.
+    su.mark_spam_ham_or_mm(item, algo_type=su.ALGO_KARGER)
     session.flush()
+
 
 def _delete_spam_action(act, session):
     """ Deletes spam action from the db, it takes care of spam flag counter. """
@@ -245,3 +242,7 @@ def _delete_spam_action(act, session):
         return
     act.item.spam_flag_counter -= 1
     session.delete(act)
+
+
+def fetch_n_items_for_mm(n, session):
+    session.query(ItemMixin.cls).filter_by().order_by(func.rand()).limit(n)

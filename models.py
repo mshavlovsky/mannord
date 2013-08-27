@@ -2,9 +2,11 @@ from sqlalchemy import (Column, Integer, Float, String, Boolean,
                         ForeignKey, DateTime, Sequence, and_)
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.declarative import declared_attr
+from  sqlalchemy.sql.expression import func
 from spam_detection_mixins import (UserDirichletMixin, ItemDirichletMixin,
                                    ActionDirichletMixin, UserKargerMixin,
                                    ItemKargerMixin, ActionKargerMixin)
+import spam_utils as su
 import graph_k as gk
 import graph_d as gd
 
@@ -92,7 +94,6 @@ class ItemMixin(ItemDirichletMixin, ItemKargerMixin, object):
         return relationship(ITEM_CLASS_NAME,
                             backref=backref('parent', remote_side=id))
 
-
     @declared_attr
     def is_spam(cls):
         return Column(Boolean, default=False)
@@ -104,6 +105,11 @@ class ItemMixin(ItemDirichletMixin, ItemKargerMixin, object):
     @declared_attr
     def spam_flag_counter(cls):
         return Column(Integer, default=0)
+
+    @declared_attr
+    def marked_for_mm(cls):
+        """Mark the action fot metamoderation."""
+        return Column(Boolean, default=False)
 
     @classmethod
     def get_add_item(cls, item_id, user, session):
@@ -137,7 +143,14 @@ class ItemMixin(ItemDirichletMixin, ItemKargerMixin, object):
         session.flush()
         return annot
 
-    def __init__(self, page_url, item_id, user, parent_id=None):
+    @classmethod
+    def get_n_items_for_spam_mm_randomly(cls, n, session):
+        return session.query(cls).filter(cls.marked_for_mm == True
+                                     ).order_by(func.random()).limit(n).all()
+
+
+    def __init__(self, page_url, item_id, user, parent_id=None,
+                spam_detect_algo=su.ALGO_KARGER):
         self.page_url = page_url
         self.id = item_id
         self.author_id = user.id
@@ -148,6 +161,8 @@ class ItemMixin(ItemDirichletMixin, ItemKargerMixin, object):
         u_p = user.sd_karma_user_u_p
         self.sd_weight = gd.get_item_weight(u_n, u_p)
         self.parent_id = parent_id
+        # Marks for metamoderation if needed.
+        su.mark_spam_ham_or_mm(self, algo_type=spam_detect_algo)
 
 
     def __repr__(self):
@@ -209,7 +224,7 @@ class ActionMixin(ActionDirichletMixin, ActionKargerMixin, object):
         return Column(DateTime)
 
     @declared_attr
-    def mark_for_mm(cls):
+    def marked_for_mm(cls):
         """Mark the action fot metamoderation."""
         return Column(Boolean, default=False)
 
