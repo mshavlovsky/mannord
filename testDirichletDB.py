@@ -118,6 +118,10 @@ class TestSpamFlag(unittest.TestCase):
         
         items = mnrd.get_n_items_for_spam_mm_randomly(2, session)
         print 'items for spam metamoderation', items
+        # Deleting spam item by the author
+        mnrd.delete_spam_item_by_author(annot4, session, algo_name=su.ALGO_DIRICHLET)
+        annot4_true = ItemMixin.cls.get_item(annot4.id, session)
+        self.assertTrue(annot4_true is None)
 
 
 if __name__ == '__main__':

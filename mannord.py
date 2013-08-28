@@ -101,3 +101,16 @@ def suggest_n_users_to_review(item, n, session):
 
 def get_n_items_for_spam_mm_randomly(n, session):
    return ItemMixin.cls.get_n_items_for_spam_mm_randomly(n, session)
+
+
+def delete_spam_item_by_author(item, session, algo_name=su.ALGO_KARGER):
+    """ If item is deleted by author then there is no reputation damage to the
+    author, plus users who flagged it receive boost to base reliability.
+    """
+    if algo_name == su.ALGO_KARGER:
+        sdk.delete_spam_item_by_author(item, session)
+    elif algo_name == su.ALGO_DIRICHLET:
+        sdd.delete_spam_item_by_author(item, session)
+    else:
+        raise Exception("Unknown algorithm!")
+

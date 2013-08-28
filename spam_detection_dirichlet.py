@@ -226,3 +226,27 @@ def _delete_spam_action(act, session):
         return
     act.item.spam_flag_counter -= 1
     session.delete(act)
+
+
+def delete_spam_item_by_author(item, session):
+    actions = ActionMixin.cls.get_actions_on_item(item.id, session)
+    if item.sd_frozen:
+        for act in actions:
+            if act.type == ACTION_FLAG_SPAM or act.type == ACTION_FLAG_HAM:
+                session.delete(act)
+        session.delete(item)
+        session.flush()
+        return
+    for act in actions:
+        if act.type == ACTION_FLAG_SPAM:
+            # Increases spam reliability
+            act.user.sd_base_u_p += BASE_SPAM_INCREMENT
+            session.delete(act)
+        elif act.type == ACTION_FLAG_HAM:
+            # Reduces spam reliability of the author
+            act.user.sd_base_u_n += BASE_SPAM_INCREMENT
+            session.delete(act)
+        else:
+            pass
+    session.delete(item)
+    session.flush()

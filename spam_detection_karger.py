@@ -246,3 +246,35 @@ def _delete_spam_action(act, session):
 
 def fetch_n_items_for_mm(n, session):
     session.query(ItemMixin.cls).filter_by().order_by(func.rand()).limit(n)
+
+
+def delete_spam_item_by_author(item, session):
+    """ If item is deleted by author then there is no reputation damage to the
+    author, plus users who flagged it receive boost to base reliability.
+    """
+    actions = ActionMixin.cls.get_actions_on_item(item.id, session)
+    if item.sk_frozen:
+        # If the item is frozen then users who flagged it already got changes
+        # to their spam reliability.
+        # In this case the user's karma user also has changes to its reliability
+        # But it is unlikely case. We want to not damage user's reputation
+        # only if delete the item fast enough.
+        session.delete(item)
+        for act in actions:
+            if act.type == ACTION_FLAG_SPAM or act.type == ACTION_FLAG_HAM:
+                session.delete(act)
+        session.flush()
+        return
+    for act in actions:
+        if act.type == ACTION_FLAG_SPAM:
+            # Increases spam reliability
+            act.user.sk_base_reliab += BASE_SPAM_INCREMENT
+            session.delete(act)
+        elif act.type == ACTION_FLAG_HAM:
+            # Reduces spam reliability of the author
+            act.user.sk_base_reliab -= BASE_SPAM_INCREMENT
+            session.delete(act)
+        else:
+            pass
+    session.delete(item)
+    session.flush()
