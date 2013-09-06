@@ -6,10 +6,10 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 import unittest
 
-from models import (ItemMixin, UserMixin, ActionMixin)
-import spam_utils as su
+from mannord import (ItemMixin, UserMixin, ActionMixin)
+import mannord.spam_utils as su
+import mannord.graph_d as gd
 import mannord as mnrd
-import graph_d as gd
 
 Base = declarative_base()
 

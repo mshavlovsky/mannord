@@ -1,6 +1,6 @@
 #!/usr/bin/python
 import unittest
-import graph_k as gk
+import mannord.graph_k as gk
 
 
 class TestKargerVanilla(unittest.TestCase):

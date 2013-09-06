@@ -1,6 +1,6 @@
 #!/usr/bin/python
 import unittest
-import graph_d as gd
+import mannord.graph_d as gd
 
 # Behaviour of the aglorithm depends on how we compute user's reliability.
 # We can listen to a user (reliability > 0) only if we have some agreement

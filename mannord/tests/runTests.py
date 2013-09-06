@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 import unittest
 
-from models import (ItemMixin, UserMixin, ActionMixin)
+from mannord import (ItemMixin, UserMixin, ActionMixin)
 import mannord as mnrd
 
 Base = declarative_base()

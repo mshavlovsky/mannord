@@ -4,8 +4,8 @@ import unittest
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from models import (ItemMixin, UserMixin, ActionMixin)
-import hits
+from mannord import (ItemMixin, UserMixin, ActionMixin)
+import mannord.hits as hits
 import mannord as mnrd
 
 
