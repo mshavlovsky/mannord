@@ -6,4 +6,6 @@ from api import (bind_engine, bootstrap,
                  raise_ham_flag, suggest_n_users_to_review,
                  get_n_items_for_spam_mm_randomly,
                  delete_spam_item_by_author,
-                 add_item, get_add_item)
+                 add_item, get_add_item,
+                 upvote, undo_upvote,
+                 downvote, undo_downvote)

@@ -37,6 +37,37 @@ def recreate_tables():
 
 class TestSpamFlag(unittest.TestCase):
 
+    def test_vote(self):
+        recreate_tables()
+        ModeratedAnnotation = ItemMixin.cls
+        Action = ActionMixin.cls
+
+        user1 = User()
+        user2 = User()
+        user3 = User()
+        session.add_all([user1, user2, user3])
+        session.flush()
+
+        annot1 = ModeratedAnnotation('www.example.com', 'annot1', user1)
+        session.add_all([annot1])
+        session.flush()
+
+        mnrd.upvote(annot1, user2, session)
+        self.assertTrue(user1.vote_counter == 1)
+        # Upvoting second time by the same user
+        mnrd.upvote(annot1, user2, session)
+        self.assertTrue(user1.vote_counter == 1)
+        # Undo upvote
+        mnrd.undo_upvote(annot1, user2, session)
+        self.assertTrue(user1.vote_counter == 0)
+        # Downvote
+        mnrd.downvote(annot1, user3, session)
+        self.assertTrue(user1.vote_counter == -1)
+        # Upvote
+        mnrd.upvote(annot1, user3, session)
+        self.assertTrue(user1.vote_counter == 1)
+
+
     def test_db_design(self):
         recreate_tables()
 

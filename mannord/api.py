@@ -2,7 +2,9 @@ from sqlalchemy import create_engine, and_
 from datetime import datetime
 import numpy as np
 from models import (ActionMixin, UserMixin, ItemMixin, ComputationMixin,
-                    COMPUTATION_SK_NAME)
+                    COMPUTATION_SK_NAME,
+                    ACTION_UPVOTE, ACTION_DOWNVOTE,
+                    ACTION_FLAG_SPAM, ACTION_FLAG_HAM)
 
 
 import spam_utils as su
@@ -140,3 +142,53 @@ def get_add_item(page_url, item_id, user, session, parent_id=None,
         annot = add_item(page_url, item_id, user, session, parent_id=parent_id,
                      action_type=action_type, spam_detect_algo=spam_detect_algo)
     return annot
+
+
+def upvote(item, user, session):
+    # Checks whether the user has upvoted the item
+    upvote = ActionMixin.cls.get_action(item.id, user.id, ACTION_UPVOTE, session)
+    if upvote is not None:
+        # The item has been upvoted by the user.
+        return
+    # Undo downvote if it exists.
+    undo_downvote(item, user, session)
+    # Okay, upvoting fresh
+    act = ActionMixin.cls(item.id, user.id, ACTION_UPVOTE, datetime.utcnow())
+    # Increase item author's vote counter.
+    item.author.vote_counter += 1
+    session.add(act)
+    session.flush()
+
+
+def downvote(item, user, session):
+    downvote = ActionMixin.cls.get_action(item.id, user.id, ACTION_DOWNVOTE, session)
+    if downvote is not None:
+        return
+    # Undo upvote is it exists.
+    undo_upvote(item, user, session)
+    # Downvoting
+    act = ActionMixin.cls(item.id, user.id, ACTION_DOWNVOTE, datetime.utcnow())
+    # Decrease item author's vote counter
+    item.author.vote_counter -= 1
+    session.add(act)
+    session.flush()
+
+
+def undo_upvote(item, user, session):
+    upvote = ActionMixin.cls.get_action(item.id, user.id, ACTION_UPVOTE, session)
+    if upvote is None:
+        # Nothing to do
+        return
+    item.author.vote_counter -= 1
+    session.delete(upvote)
+    session.flush()
+
+
+def undo_downvote(item, user, session):
+    downvote = ActionMixin.cls.get_action(item.id, user.id, ACTION_DOWNVOTE, session)
+    if downvote is None:
+        # Nothing to do
+        return
+    item.author.vote_counter += 1
+    session.delete(downvote)
+    session.flush()

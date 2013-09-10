@@ -57,6 +57,14 @@ class UserMixin(UserDirichletMixin, UserKargerMixin, object):
     def is_spammer(cls):
         return Column(Boolean, default=False)
 
+    @declared_attr
+    def vote_counter(cls):
+        return Column(Integer, default=0)
+
+    @declared_attr
+    def mm_vote_counter(cls):
+        return Column(Integer, default=0)
+
 
 class ItemMixin(ItemDirichletMixin, ItemKargerMixin, object):
     """ Item is an object like annotation, post, etc.
@@ -110,6 +118,11 @@ class ItemMixin(ItemDirichletMixin, ItemKargerMixin, object):
     def marked_for_mm(cls):
         """Mark the action fot metamoderation."""
         return Column(Boolean, default=False)
+
+#    @declared_attr
+#    def is_mm(cls):
+#        """ True if the action is metamoderation."""
+#        return Column(Boolean, default=False)
 
     @classmethod
     def get_item(cls, item_id, session):
