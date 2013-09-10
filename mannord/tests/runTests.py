@@ -67,6 +67,17 @@ class TestSpamFlag(unittest.TestCase):
         mnrd.upvote(annot1, user3, session)
         self.assertTrue(user1.vote_counter == 1)
 
+        # Creates an item which is action.
+        annot2 = mnrd.get_add_item('www.example.com', 'annot2', user2, session,
+                                   parent_id='annot1', action_type='upvote')
+        self.assertTrue(user1.vote_counter == 2)
+        self.assertTrue(user1.mm_vote_counter == 1)
+
+        # Deletes item 2
+        mnrd.delete_item(annot2, session)
+        self.assertTrue(user1.vote_counter == 1)
+        self.assertTrue(user1.mm_vote_counter == 0)
+
 
     def test_db_design(self):
         recreate_tables()

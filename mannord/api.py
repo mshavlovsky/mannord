@@ -109,6 +109,19 @@ def delete_spam_item_by_author(item, session, algo_name=su.ALGO_KARGER):
     """ If item is deleted by author then there is no reputation damage to the
     author, plus users who flagged it receive boost to base reliability.
     """
+    if item.action_twin is not None:
+        # If the item is also an action, delete the action first.
+        if item.action_twin.type == ACTION_UPVOTE:
+            item.parent.author.mm_vote_counter -= 1
+            item.parent.author.vote_counter -= 1
+        elif item.action_twin.type == ACTION_DOWNVOTE:
+            item.parent.author.mm_vote_counter += 1
+            item.parent.author.vote_counter += 1
+        else:
+            raise Exception("Unknown action: %s" % item.action_twin)
+        session.delete(item.action_twin)
+        session.flush()
+    # Okay, deletes the item.
     if algo_name == su.ALGO_KARGER:
         sdk.delete_spam_item_by_author(item, session)
     elif algo_name == su.ALGO_DIRICHLET:
@@ -123,14 +136,24 @@ def add_item(page_url, item_id, user, session, parent_id=None, action_type=None,
     annot = ItemMixin.cls(page_url, item_id, user, parent_id=parent_id,
                           spam_detect_algo=spam_detect_algo)
     session.add(annot)
+    session.flush()
     # If the annotation is action, then create and bind the action.
     if action_type is not None:
         if parent_id is None:
             raise Exception("New annotation which is action should have a parent!")
         act = ActionMixin.cls(parent_id, user.id, action_type,
                               datetime.utcnow(), item_twin_id=annot.id)
+        item = ItemMixin.cls.get_item(parent_id, session)
+        if action_type == ACTION_UPVOTE:
+            item.author.mm_vote_counter += 1
+            item.author.vote_counter += 1
+        elif action_type == ACTION_DOWNVOTE:
+            item.author.mm_vote_counter -= 1
+            item.author.vote_counter -= 1
+        else:
+            raise Exception("Action should be whether upvote or donwvote!")
         session.add(act)
-    session.flush()
+        session.flush()
     return annot
 
 
@@ -143,6 +166,25 @@ def get_add_item(page_url, item_id, user, session, parent_id=None,
                      action_type=action_type, spam_detect_algo=spam_detect_algo)
     return annot
 
+def delete_item(item, session):
+    # If the item is action, then delete this action and then delete the item.
+    if item.children is not None and len(item.children) != 0:
+        # We cannot delete the item, it has subitems
+        print 'childred', item.children
+        print 'inside'
+        return
+    if item.action_twin is not None:
+        if item.action_twin.type == ACTION_UPVOTE:
+            item.parent.author.mm_vote_counter -= 1
+            item.parent.author.vote_counter -= 1
+        elif item.action_twin.type == ACTION_DOWNVOTE:
+            item.parent.author.mm_vote_counter += 1
+            item.parent.author.vote_counter += 1
+        else:
+            raise Exception("Unknown action: %s" % item.action_twin)
+        session.delete(item.action_twin)
+    session.delete(item)
+    session.flush()
 
 def upvote(item, user, session):
     # Checks whether the user has upvoted the item
