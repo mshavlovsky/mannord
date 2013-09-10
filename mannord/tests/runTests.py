@@ -29,18 +29,6 @@ session = Session()
 mnrd.bootstrap(Base, engine, session, add_computation_record=False)
 
 
-def print_actions_sk(session):
-    actions = ActionMixin.cls.sk_get_actions_offline_spam_detect(session)
-    print '\n actions'
-    for act in actions:
-        print act
-
-def print_items_sk(session):
-    items = ItemMixin.cls.sk_get_items_offline_spam_detect(session)
-    print "\n items"
-    for it in items:
-        print it
-
 def recreate_tables():
     Base.metadata.drop_all()
     session.expunge_all()
@@ -60,7 +48,7 @@ class TestSpamFlag(unittest.TestCase):
         session.add_all([user1, user2])
         session.flush()
 
-        # Testin parent-child relationship
+        # Testing parent-child relationship
         annot1 = ModeratedAnnotation('www.example.com', 'annot1', user1)
         annot2 = ModeratedAnnotation('www.example.com', 'annot2', user1,
                                       parent_id='annot1')
@@ -82,6 +70,14 @@ class TestSpamFlag(unittest.TestCase):
         session.flush()
         self.assertTrue(upvote.item_twin.id == annot2.id)
         self.assertTrue(annot2.action_twin.id == upvote.id)
+
+        # Testing get add item
+        annot5 = mnrd.get_add_item('www.example.com', 'annot5', user2, session,
+                                   parent_id='annot1', action_type='upvote')
+        self.assertTrue(annot5.id == 'annot5')
+        act = annot5.action_twin
+        actions = Action.get_actions_on_item('annot1', session)
+        self.assertTrue(act in actions)
 
 
 if __name__ == '__main__':

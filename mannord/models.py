@@ -112,16 +112,6 @@ class ItemMixin(ItemDirichletMixin, ItemKargerMixin, object):
         return Column(Boolean, default=False)
 
     @classmethod
-    def get_add_item(cls, item_id, user, session):
-        """ Method returns an item record. If it does not exist,
-        it created a record in the table.
-        """
-        annot = cls.get_item(item_id, session)
-        if annot is None:
-            annot = cls.add_item(item_id, user, session)
-        return annot
-
-    @classmethod
     def get_item(cls, item_id, session):
         annot = session.query(cls).filter_by(id = item_id).first()
         return annot
@@ -135,22 +125,13 @@ class ItemMixin(ItemDirichletMixin, ItemKargerMixin, object):
         return session.query(cls).filter_by(author_id = user_id).all()
 
     @classmethod
-    def add_item(cls, item_id, user, session):
-        # todo(michael): add item's parent, if exist. Also check initializations
-        # of fields related to sd_ and sk_.
-        annot = cls(item_id, user)
-        session.add(annot)
-        session.flush()
-        return annot
-
-    @classmethod
     def get_n_items_for_spam_mm_randomly(cls, n, session):
         return session.query(cls).filter(cls.marked_for_mm == True
                                      ).order_by(func.random()).limit(n).all()
 
 
     def __init__(self, page_url, item_id, user, parent_id=None,
-                spam_detect_algo=su.ALGO_KARGER):
+                 spam_detect_algo=su.ALGO_KARGER):
         self.page_url = page_url
         self.id = item_id
         self.author_id = user.id
@@ -163,7 +144,7 @@ class ItemMixin(ItemDirichletMixin, ItemKargerMixin, object):
         self.parent_id = parent_id
         # Marks for metamoderation if needed.
         su.mark_spam_ham_or_mm(self, algo_type=spam_detect_algo)
-
+        # If an item is also action on another item then create this action.
 
     def __repr__(self):
         return '<Item %s>' % self.id
@@ -264,7 +245,7 @@ class ActionMixin(ActionDirichletMixin, ActionKargerMixin, object):
         self.timestamp = timestamp
         # item_id and item_twin_id cannot coinside
         if item_id == item_twin_id:
-            raise Exception("C'mon, an action cannot be performed on an item which represents the action!!!")
+            raise Exception("An action cannot be performed on an item which represents the action!!!")
         self.item_twin_id = item_twin_id
 
     def __repr__(self):

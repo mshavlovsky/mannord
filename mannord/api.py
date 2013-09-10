@@ -114,3 +114,29 @@ def delete_spam_item_by_author(item, session, algo_name=su.ALGO_KARGER):
     else:
         raise Exception("Unknown algorithm!")
 
+
+def add_item(page_url, item_id, user, session, parent_id=None, action_type=None,
+             spam_detect_algo=su.ALGO_KARGER):
+    """ Creates an item and adds it to the db."""
+    annot = ItemMixin.cls(page_url, item_id, user, parent_id=parent_id,
+                          spam_detect_algo=spam_detect_algo)
+    session.add(annot)
+    # If the annotation is action, then create and bind the action.
+    if action_type is not None:
+        if parent_id is None:
+            raise Exception("New annotation which is action should have a parent!")
+        act = ActionMixin.cls(parent_id, user.id, action_type,
+                              datetime.utcnow(), item_twin_id=annot.id)
+        session.add(act)
+    session.flush()
+    return annot
+
+
+def get_add_item(page_url, item_id, user, session, parent_id=None,
+             action_type=None, spam_detect_algo=su.ALGO_KARGER):
+    annot = ItemMixin.cls.get_item(item_id, session)
+    # If annotation does not exist then create it.
+    if annot is None:
+        annot = add_item(page_url, item_id, user, session, parent_id=parent_id,
+                     action_type=action_type, spam_detect_algo=spam_detect_algo)
+    return annot
