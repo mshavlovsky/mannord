@@ -52,18 +52,9 @@ def name_check(algo_name):
         raise Exception("Unknown algorithm !")
 
 
-def bootstrap_check():
-    if (ActionMixin.cls is None or
-        ItemMixin.cls is None or
-        ComputationMixin.cls is None):
-        raise Exception("You forgot to bootstrap the mannord!")
-
-
 def run_offline_spam_detection(algo_name, session):
     """ Method runs offline spam detection. """
-    # Some initial chenking.
     name_check(algo_name)
-    bootstrap_check()
     # Obtains class names to perform db querries later.
     if algo_name == su.ALGO_KARGER:
         sdk.run_offline_computations(session)
@@ -75,7 +66,6 @@ def run_offline_spam_detection(algo_name, session):
 
 def raise_spam_flag(item, user, session, algo_name=su.ALGO_KARGER):
     timestamp = datetime.utcnow()
-    bootstrap_check()
     if algo_name == su.ALGO_KARGER:
         sdk.flag_spam(item, user, timestamp, session)
     else:
@@ -84,7 +74,6 @@ def raise_spam_flag(item, user, session, algo_name=su.ALGO_KARGER):
 
 def raise_ham_flag(item, user, session, algo_name=su.ALGO_KARGER):
     timestamp = datetime.utcnow()
-    bootstrap_check()
     if algo_name == su.ALGO_KARGER:
         sdk.flag_ham(item, user, timestamp, session)
     else:
