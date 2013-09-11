@@ -1,3 +1,5 @@
+import ConfigParser
+import os
 from sqlalchemy import (Column, Integer, Float, String, Boolean,
                         ForeignKey, DateTime, Sequence, and_)
 from sqlalchemy.orm import relationship, backref
@@ -10,14 +12,22 @@ import spam_utils as su
 import graph_k as gk
 import graph_d as gd
 
+from pkg_resources import resource_string, resource_filename
+file_path_config = resource_filename(__name__, 'mannord.conf')
 
 # note(michael): there is an issue when using foreign keys.
 # We don't know tables' and classes' names of tables.
 # For now I use global constants to keep these names, if that okay then
 # it makes sence to move constants into a config file.
 
+ini_config = ConfigParser.ConfigParser()
+ini_config.readfp(open(file_path_config))
+
+USER_TABLE_ID_FIELD = ini_config.get('names','user_table_id_field').strip("'")
+print "user table id field is", USER_TABLE_ID_FIELD
+
 # Constants
-USER_TABLE_ID_FIELD = 'user.id'
+#USER_TABLE_ID_FIELD = 'user.id'
 USER_CLASS_NAME = 'User'
 ITEM_TABLE_ID_FIELD = 'annotation.id'
 ITEM_CLASS_NAME = 'ModeratedAnnotation'

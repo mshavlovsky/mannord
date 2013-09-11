@@ -8,5 +8,6 @@ setup(name='mannord',
       author_email='mshavlovsky@gmail.com',
       license='BSD',
       packages=['mannord'],
-      long_description=open('README.txt').read()
+      long_description=open('README.txt').read(),
+      package_data = { 'mannord': ['mannord.conf'] }
       )
