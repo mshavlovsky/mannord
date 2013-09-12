@@ -1,9 +1,19 @@
-KARGER_THRESHOLD_SPAM = -1
-KARGER_THRESHOLD_HAM = 5
-DIRICHLET_THRESHOLD_SPAM = -0.001
-DIRICHLET_THRESHOLD_HAM = 0.03
-ALGO_KARGER = 'karger'
-ALGO_DIRICHLET = 'dirichlet'
+import os
+import ConfigParser
+from pkg_resources import resource_string, resource_filename
+
+
+# Reads config file
+file_path_config = resource_filename(__name__, 'mannord.conf')
+ini_config = ConfigParser.ConfigParser()
+ini_config.readfp(open(file_path_config))
+
+KARGER_THRESHOLD_SPAM = ini_config.get('constants','KARGER_THRESHOLD_SPAM')
+KARGER_THRESHOLD_HAM = ini_config.get('constants','KARGER_THRESHOLD_HAM')
+DIRICHLET_THRESHOLD_SPAM = ini_config.get('constants','DIRICHLET_THRESHOLD_SPAM')
+DIRICHLET_THRESHOLD_HAM = ini_config.get('constants','DIRICHLET_THRESHOLD_HAM')
+ALGO_KARGER = ini_config.get('names','ALGO_KARGER')
+ALGO_DIRICHLET = ini_config.get('names','ALGO_DIRICHLET')
 
 
 def mark_spam_ham_or_mm(item, algo_type=ALGO_KARGER):

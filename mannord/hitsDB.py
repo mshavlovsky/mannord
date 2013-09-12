@@ -1,9 +1,6 @@
 import collections
 import numpy as np
-from models import (ActionMixin, UserMixin, ItemMixin,
-                    ComputationMixin, COMPUTATION_SK_NAME,
-                    ACTION_FLAG_SPAM, ACTION_FLAG_HAM,
-                    ACTION_UPVOTE, ACTION_DOWNVOTE)
+from models import (ActionMixin, UserMixin, ItemMixin)
 import hits
 
 K_MAX = 10

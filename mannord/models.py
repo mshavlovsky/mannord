@@ -1,10 +1,11 @@
-import ConfigParser
 import os
+import ConfigParser
+from pkg_resources import resource_string, resource_filename
 from sqlalchemy import (Column, Integer, Float, String, Boolean,
                         ForeignKey, DateTime, Sequence, and_)
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.ext.declarative import declared_attr
-from  sqlalchemy.sql.expression import func
+from sqlalchemy.sql.expression import func
 from spam_detection_mixins import (UserDirichletMixin, ItemDirichletMixin,
                                    ActionDirichletMixin, UserKargerMixin,
                                    ItemKargerMixin, ActionKargerMixin)
@@ -12,14 +13,9 @@ import spam_utils as su
 import graph_k as gk
 import graph_d as gd
 
-from pkg_resources import resource_string, resource_filename
+
+# Reads config file
 file_path_config = resource_filename(__name__, 'mannord.conf')
-
-# note(michael): there is an issue when using foreign keys.
-# We don't know tables' and classes' names of tables.
-# For now I use global constants to keep these names, if that okay then
-# it makes sence to move constants into a config file.
-
 ini_config = ConfigParser.ConfigParser()
 ini_config.readfp(open(file_path_config))
 
