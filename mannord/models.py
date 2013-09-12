@@ -23,28 +23,24 @@ file_path_config = resource_filename(__name__, 'mannord.conf')
 ini_config = ConfigParser.ConfigParser()
 ini_config.readfp(open(file_path_config))
 
-USER_TABLE_ID_FIELD = ini_config.get('names','user_table_id_field').strip("'")
-print "user table id field is", USER_TABLE_ID_FIELD
 
 # Constants
-#USER_TABLE_ID_FIELD = 'user.id'
-USER_CLASS_NAME = 'User'
-ITEM_TABLE_ID_FIELD = 'annotation.id'
-ITEM_CLASS_NAME = 'ModeratedAnnotation'
-ITEM_TABLE_NAME = 'annotation'
-ACTION_TABLE_NAME = 'action'
-ACTION_TABLE_NAME_ID_FIELD = 'action.id'
-ACTION_CLASS_NAME = "Action"
+USER_TABLE_ID_FIELD = ini_config.get('names','USER_TABLE_ID_FIELD')
+USER_CLASS_NAME =  ini_config.get('names','USER_CLASS_NAME')
+ITEM_TABLE_ID_FIELD =  ini_config.get('names', 'ITEM_TABLE_ID_FIELD')
+ITEM_CLASS_NAME =  ini_config.get('names', 'ITEM_CLASS_NAME')
+ITEM_TABLE_NAME =   ini_config.get('names', 'ITEM_TABLE_NAME')
+ACTION_TABLE_NAME =   ini_config.get('names', 'ACTION_TABLE_NAME')
+ACTION_TABLE_NAME_ID_FIELD =  ini_config.get('names', 'ACTION_TABLE_NAME_ID_FIELD')
+ACTION_CLASS_NAME =   ini_config.get('names', 'ACTION_CLASS_NAME')
+ACTION_UPVOTE =   ini_config.get('names', 'ACTION_UPVOTE')
+ACTION_DOWNVOTE =   ini_config.get('names', 'ACTION_DOWNVOTE')
+ACTION_FLAG_SPAM =   ini_config.get('names', 'ACTION_FLAG_SPAM')
+ACTION_FLAG_HAM =    ini_config.get('names', 'ACTION_FLAG_HAM')
+COMPUTATION_SK_NAME =   ini_config.get('names', 'COMPUTATION_SK_NAME')
 
-
-ACTION_UPVOTE = 'upvote'
-ACTION_DOWNVOTE = 'downvote'
-ACTION_FLAG_SPAM = 'flag_spam'
-ACTION_FLAG_HAM = 'flag_ham'
 
 STRING_FIELD_LENGTH = 32
-
-COMPUTATION_SK_NAME = "spam_detection_karger"
 # Explanation of prefixes of column names.
 #   - sk - a field related to spam detection using karger's algorithm
 #   - sd - a filed related to spam detection based on Dirichlet distribution
