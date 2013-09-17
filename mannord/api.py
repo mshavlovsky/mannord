@@ -187,6 +187,7 @@ def upvote(item, user, session):
     act = ActionMixin.cls(item.id, user.id, ACTION_UPVOTE, datetime.utcnow())
     # Increase item author's vote counter.
     item.author.vote_counter += 1
+    # todo(michael): triger ham flag
     session.add(act)
     session.flush()
 

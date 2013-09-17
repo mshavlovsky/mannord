@@ -2,7 +2,7 @@
 # Use's reliability is computed using Dirichlet dist.
 import numpy as np
 
-ALGO_DIRICHLET_KARMA_USER_VOTE = 0.5
+ALGO_DIRICHLET_KARMA_USER_VOTE = 0.1
 
 DEBUG = False
 

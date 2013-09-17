@@ -2,9 +2,9 @@
 import numpy as np
 
 USE_ASYMPTOTIC_FUNC = True
-DEBUG = False
+DEBUG = False 
 DEFAULT_RELIABILITY = 0.5
-KARMA_USER_VOTE = 0.3
+KARMA_USER_VOTE = 0.1
 
 
 class Item(object):

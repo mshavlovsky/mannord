@@ -8,8 +8,7 @@ import spam_utils as su
 import graph_k as gk
 
 
-# todo(michael): tune parameters
-K_MAX = 10
+K_MAX = 11
 # If weight of an item is less than ..._DEFINITELY_SPAM then annotation is
 # excluded from offline computations, similarly for  ..._DEFINITELY_HAM
 THRESHOLD_DEFINITELY_SPAM = - np.inf

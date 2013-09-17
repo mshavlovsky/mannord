@@ -12,8 +12,8 @@ KARGER_THRESHOLD_SPAM = ini_config.get('constants','KARGER_THRESHOLD_SPAM')
 KARGER_THRESHOLD_HAM = ini_config.get('constants','KARGER_THRESHOLD_HAM')
 DIRICHLET_THRESHOLD_SPAM = ini_config.get('constants','DIRICHLET_THRESHOLD_SPAM')
 DIRICHLET_THRESHOLD_HAM = ini_config.get('constants','DIRICHLET_THRESHOLD_HAM')
-ALGO_KARGER = ini_config.get('names','ALGO_KARGER')
-ALGO_DIRICHLET = ini_config.get('names','ALGO_DIRICHLET')
+ALGO_KARGER = 'karger'
+ALGO_DIRICHLET = 'dirichlet'
 
 
 def mark_spam_ham_or_mm(item, algo_type=ALGO_KARGER):

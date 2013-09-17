@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 import unittest
 
-from mannord import (ItemMixin, UserMixin, ActionMixin)
+from mannord import (ItemMixin, UserMixin, ActionMixin, ComputationMixin)
 import mannord as mnrd
 
 Base = declarative_base()
@@ -32,32 +32,39 @@ def print_items_sk(session):
     for it in items:
         print it
 
+# Creates/binds engine and bootstraps mannord
+engine = create_engine('sqlite:///:memory:')
+#engine = create_engine("mysql://root:@localhost/mannord_test")
+Session = sessionmaker()
+mnrd.bind_engine(engine, Session, Base)
+session = Session()
+mnrd.bootstrap(Base, engine, session)
+
+
+def recreate_tables():
+    Base.metadata.drop_all()
+    session.expunge_all()
+    Base.metadata.create_all()
+    session.add(ComputationMixin.cls(mnrd.COMPUTATION_SK_NAME))
+    session.flush()
+
 
 class TestSpamFlag(unittest.TestCase):
 
     def test_spam_flag_karger(self):
-        engine = create_engine('sqlite:///:memory:')
-        #engine = create_engine("mysql://root:@localhost/mannord_test")
-        Session = sessionmaker()
-        session = Session()
-        mnrd.bind_engine(engine, Session, Base)
-        mnrd.bootstrap(Base, engine, session)
+        recreate_tables()
         ModeratedAnnotation = ItemMixin.cls
 
         # Creates users and annotations
         user1 = User()
         user2 = User()
         user3 = User()
-        session.add(user1)
-        session.add(user2)
-        session.add(user3)
+        session.add_all([user1, user2, user3])
         session.flush()
         annot1 = ModeratedAnnotation('www.example.com', 'annot1', user1)
         annot2 = ModeratedAnnotation('www.example.com', 'annot2', user1)
         annot3 = ModeratedAnnotation('www.example.com', 'annot3', user3)
-        session.add(annot1)
-        session.add(annot2)
-        session.add(annot3)
+        session.add_all([annot1, annot2, annot3])
         session.commit()
 
         # Adds a flag and deletes it.
@@ -115,6 +122,35 @@ class TestSpamFlag(unittest.TestCase):
         mnrd.delete_spam_item_by_author(annot4, session)
         annot4_true = ItemMixin.cls.get_item(annot4.id, session)
         self.assertTrue(annot4_true is None)
+
+
+    def test_spam_flag_karger_2(self):
+        recreate_tables()
+        ModeratedAnnotation = ItemMixin.cls
+
+        # Creates users and annotations
+        user1 = User()
+        user2 = User()
+        user3 = User()
+        user4 = User()
+        user5 = User()
+        session.add_all([user1, user2, user3, user4, user5])
+        session.flush()
+        annot1 = ModeratedAnnotation('www.example.com', 'annot1', user1)
+        annot2 = ModeratedAnnotation('www.example.com', 'annot2', user2)
+        annot3 = ModeratedAnnotation('www.example.com', 'annot3', user3)
+        session.add_all([annot1, annot2, annot3])
+        session.commit()
+
+        # Adds a flag and deletes it.
+        mnrd.raise_spam_flag(annot1, user2, session)
+        mnrd.raise_spam_flag(annot1, user3, session)
+        #mnrd.raise_spam_flag(annot2, user2, session)
+        mnrd.raise_ham_flag(annot2, user3, session)
+        #mnrd.raise_ham_flag(annot1, user4, session)
+        mnrd.run_offline_spam_detection('karger', session)
+        print 'annot1 spam weight', annot1.sk_weight
+        print 'annot2 spam weight', annot2.sk_weight
 
 
 if __name__ == '__main__':
