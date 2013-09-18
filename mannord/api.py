@@ -12,6 +12,7 @@ import spam_detection_karger as sdk
 import spam_detection_dirichlet as sdd
 import hitsDB
 
+SPAM_ALGO = su.ALGO_DIRICHLET
 
 def bind_engine(engine, session, base, should_create=True):
     session.configure(bind=engine)
@@ -187,7 +188,7 @@ def upvote(item, user, session):
     act = ActionMixin.cls(item.id, user.id, ACTION_UPVOTE, datetime.utcnow())
     # Increase item author's vote counter.
     item.author.vote_counter += 1
-    # todo(michael): triger ham flag
+    raise_ham_flag(item, user, session)
     session.add(act)
     session.flush()
 
@@ -212,6 +213,12 @@ def undo_upvote(item, user, session):
         # Nothing to do
         return
     item.author.vote_counter -= 1
+    if SPAM_ALGO == su.ALGO_KARGER:
+        sdk._undo_spam_ham_flag(item, user, session, spam_flag==False)
+    elif SPAM_ALGO == su.ALGO_DIRICHLET:
+        sdd._undo_spam_ham_flag(item, user, session, spam_flag==False)
+    else:
+        raise Exception("unknown algorithm")
     session.delete(upvote)
     session.flush()
 
