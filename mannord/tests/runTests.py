@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 import unittest
 
-from mannord import (ItemMixin, UserMixin, ActionMixin)
+from mannord import (ItemMixin, UserMixin, ActionMixin, ComputationMixin)
 import mannord as mnrd
 
 Base = declarative_base()
@@ -26,13 +26,16 @@ engine = create_engine('sqlite:///:memory:')
 Session = sessionmaker()
 mnrd.bind_engine(engine, Session, Base)
 session = Session()
-mnrd.bootstrap(Base, engine, session, add_computation_record=False)
+mnrd.bootstrap(Base, engine, session)
 
 
 def recreate_tables():
     Base.metadata.drop_all()
     session.expunge_all()
     Base.metadata.create_all()
+    session.add(ComputationMixin.cls(mnrd.COMPUTATION_SK_NAME))
+    session.flush()
+
 
 
 class TestSpamFlag(unittest.TestCase):

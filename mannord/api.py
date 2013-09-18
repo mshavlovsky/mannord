@@ -25,7 +25,7 @@ def bootstrap(base, engine, session, add_computation_record=True):
     class Computation(ComputationMixin, base):
         pass
 
-    class Action(ActionMixin, base):
+    class ModerationAction(ActionMixin, base):
         pass
 
     class ModeratedAnnotation(ItemMixin, base):
@@ -36,7 +36,7 @@ def bootstrap(base, engine, session, add_computation_record=True):
         session.add(Computation(COMPUTATION_SK_NAME))
         session.flush()
 
-    ActionMixin.cls = Action
+    ActionMixin.cls = ModerationAction
     ItemMixin.cls = ModeratedAnnotation
     ComputationMixin.cls = Computation
 
@@ -214,9 +214,9 @@ def undo_upvote(item, user, session):
         return
     item.author.vote_counter -= 1
     if SPAM_ALGO == su.ALGO_KARGER:
-        sdk._undo_spam_ham_flag(item, user, session, spam_flag==False)
+        sdk._undo_spam_ham_flag(item, user, session, spam_flag=False)
     elif SPAM_ALGO == su.ALGO_DIRICHLET:
-        sdd._undo_spam_ham_flag(item, user, session, spam_flag==False)
+        sdd._undo_spam_ham_flag(item, user, session, spam_flag=False)
     else:
         raise Exception("unknown algorithm")
     session.delete(upvote)
