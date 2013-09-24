@@ -21,8 +21,7 @@ def bind_engine(engine, session, base, should_create=True):
         base.metadata.create_all(engine)
 
 
-def bootstrap(base, session, add_computation_record=True):
-    """ Engine should be binded before calling this function."""
+def create_classes(base)
     class Computation(ComputationMixin, base):
         pass
 
@@ -32,14 +31,34 @@ def bootstrap(base, session, add_computation_record=True):
     class ModeratedAnnotation(ItemMixin, base):
         pass
 
-    base.metadata.create_all(base.metadata.bind)
-    if add_computation_record:
-        session.add(Computation(COMPUTATION_SK_NAME))
-        session.flush()
+    return ModeratedAnnotation, ModerationAction, Computation
 
+
+def remember_clasees(ModeratedAnnotation, ModerationAction, Computation):
     ActionMixin.cls = ModerationAction
     ItemMixin.cls = ModeratedAnnotation
     ComputationMixin.cls = Computation
+
+
+#def bootstrap(base, session, add_computation_record=True):
+#    """ Engine should be binded before calling this function."""
+#    class Computation(ComputationMixin, base):
+#        pass
+#
+#    class ModerationAction(ActionMixin, base):
+#        pass
+#
+#    class ModeratedAnnotation(ItemMixin, base):
+#        pass
+#
+#    base.metadata.create_all(base.metadata.bind)
+#    if add_computation_record:
+#        session.add(Computation(COMPUTATION_SK_NAME))
+#        session.flush()
+#
+#    ActionMixin.cls = ModerationAction
+#    ItemMixin.cls = ModeratedAnnotation
+#    ComputationMixin.cls = Computation
 
 
 def name_check(algo_name):
