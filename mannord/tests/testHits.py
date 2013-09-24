@@ -59,7 +59,7 @@ class TestHITS(unittest.TestCase):
         Session = sessionmaker()
         session = Session()
         mnrd.bind_engine(engine, Session, Base)
-        mnrd.bootstrap(Base, engine, session)
+        mnrd.bootstrap(Base, session)
         ModeratedAnnotation = ItemMixin.cls
 
         # Creates users and annotations

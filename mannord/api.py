@@ -21,7 +21,8 @@ def bind_engine(engine, session, base, should_create=True):
         base.metadata.create_all(engine)
 
 
-def bootstrap(base, engine, session, add_computation_record=True):
+def bootstrap(base, session, add_computation_record=True):
+    """ Engine should be binded before calling this function."""
     class Computation(ComputationMixin, base):
         pass
 
@@ -31,7 +32,7 @@ def bootstrap(base, engine, session, add_computation_record=True):
     class ModeratedAnnotation(ItemMixin, base):
         pass
 
-    base.metadata.create_all(engine)
+    base.metadata.create_all(base.metadata.bind)
     if add_computation_record:
         session.add(Computation(COMPUTATION_SK_NAME))
         session.flush()
@@ -40,13 +41,6 @@ def bootstrap(base, engine, session, add_computation_record=True):
     ItemMixin.cls = ModeratedAnnotation
     ComputationMixin.cls = Computation
 
-
-def add_computation_record(base, engine, session):
-        if not ComputationMixin.cls is None:
-            session.add(ComputationMixin.cls(COMPUTATION_SK_NAME))
-        else:
-            raise Exception("Mannord has not been bootrstraped!")
-        session.flush()
 
 def name_check(algo_name):
     if algo_name != su.ALGO_KARGER and algo_name != su.ALGO_DIRICHLET:
