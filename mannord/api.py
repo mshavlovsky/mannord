@@ -34,7 +34,7 @@ def create_classes(base)
     return ModeratedAnnotation, ModerationAction, Computation
 
 
-def remember_clasees(ModeratedAnnotation, ModerationAction, Computation):
+def remember_classes(ModeratedAnnotation, ModerationAction, Computation):
     ActionMixin.cls = ModerationAction
     ItemMixin.cls = ModeratedAnnotation
     ComputationMixin.cls = Computation
