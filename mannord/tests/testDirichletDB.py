@@ -42,7 +42,7 @@ engine = create_engine('sqlite:///:memory:')
 Session = sessionmaker()
 mnrd.bind_engine(engine, Session, Base)
 session = Session()
-mnrd.bootstrap(Base, session)
+mnrd.bootstrap(Base, create_all=True)
 
 
 def recreate_tables():

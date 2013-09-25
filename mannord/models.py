@@ -289,6 +289,10 @@ class ComputationMixin(object):
     def get(cls, name, session):
         comp = session.query(cls).filter(
                      cls.name == name).first()
+        if comp is None:
+            comp = cls(name)
+            session.add(comp)
+            session.flush()
         return comp
 
     def __init__(self, name):

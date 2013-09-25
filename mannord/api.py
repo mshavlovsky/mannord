@@ -21,7 +21,8 @@ def bind_engine(engine, session, base, should_create=True):
         base.metadata.create_all(engine)
 
 
-def create_classes(base)
+def bootstrap(base, create_all=False):
+    """ Engine should be binded before calling this function."""
     class Computation(ComputationMixin, base):
         pass
 
@@ -31,44 +32,16 @@ def create_classes(base)
     class ModeratedAnnotation(ItemMixin, base):
         pass
 
-    return ModeratedAnnotation, ModerationAction, Computation
-
-
-def remember_classes(ModeratedAnnotation, ModerationAction, Computation):
     ActionMixin.cls = ModerationAction
     ItemMixin.cls = ModeratedAnnotation
     ComputationMixin.cls = Computation
 
-
-#def bootstrap(base, session, add_computation_record=True):
-#    """ Engine should be binded before calling this function."""
-#    class Computation(ComputationMixin, base):
-#        pass
-#
-#    class ModerationAction(ActionMixin, base):
-#        pass
-#
-#    class ModeratedAnnotation(ItemMixin, base):
-#        pass
-#
-#    base.metadata.create_all(base.metadata.bind)
-#    if add_computation_record:
-#        session.add(Computation(COMPUTATION_SK_NAME))
-#        session.flush()
-#
-#    ActionMixin.cls = ModerationAction
-#    ItemMixin.cls = ModeratedAnnotation
-#    ComputationMixin.cls = Computation
-
-
-def name_check(algo_name):
-    if algo_name != su.ALGO_KARGER and algo_name != su.ALGO_DIRICHLET:
-        raise Exception("Unknown algorithm !")
+    if create_all:
+        base.metadata.create_all(base.metadata.bind)
 
 
 def run_offline_spam_detection(algo_name, session):
     """ Method runs offline spam detection. """
-    name_check(algo_name)
     # Obtains class names to perform db querries later.
     if algo_name == su.ALGO_KARGER:
         sdk.run_offline_computations(session)
