@@ -8,6 +8,7 @@ import unittest
 
 from mannord import (ItemMixin, UserMixin, ActionMixin, ComputationMixin)
 import mannord as mnrd
+import mannord.spam_utils as su
 
 Base = declarative_base()
 
@@ -60,29 +61,32 @@ class TestSpamFlag(unittest.TestCase):
         user3 = User()
         session.add_all([user1, user2, user3])
         session.flush()
-        annot1 = ModeratedAnnotation('www.example.com', 'annot1', user1)
-        annot2 = ModeratedAnnotation('www.example.com', 'annot2', user1)
-        annot3 = ModeratedAnnotation('www.example.com', 'annot3', user3)
+        annot1 = ModeratedAnnotation('www.example.com', 'annot1', user1,
+                                            spam_detect_algo=su.ALGO_KARGER)
+        annot2 = ModeratedAnnotation('www.example.com', 'annot2', user1,
+                                            spam_detect_algo=su.ALGO_KARGER)
+        annot3 = ModeratedAnnotation('www.example.com', 'annot3', user3,
+                                            spam_detect_algo=su.ALGO_KARGER)
         session.add_all([annot1, annot2, annot3])
         session.commit()
 
         # Adds a flag and deletes it.
-        mnrd.raise_spam_flag(annot1, user2, session)
-        mnrd.raise_spam_flag(annot1, user2, session)
+        mnrd.raise_spam_flag(annot1, user2, session, algo_name = su.ALGO_KARGER)
+        mnrd.raise_spam_flag(annot1, user2, session, algo_name = su.ALGO_KARGER)
         self.assertTrue(annot1.spam_flag_counter == 1)
-        mnrd.run_offline_spam_detection('karger', session)
+        mnrd.run_offline_spam_detection(su.ALGO_KARGER, session)
         self.assertTrue(annot1.sk_weight < 0)
-        mnrd.raise_ham_flag(annot1, user2, session)
-        mnrd.raise_ham_flag(annot1, user2, session)
+        mnrd.raise_ham_flag(annot1, user2, session, algo_name = su.ALGO_KARGER)
+        mnrd.raise_ham_flag(annot1, user2, session, algo_name = su.ALGO_KARGER)
         mnrd.run_offline_spam_detection('karger', session)
         self.assertTrue(annot1.spam_flag_counter == 0)
         self.assertTrue(annot1.sk_weight > 0)
 
         # Adds four flags
-        mnrd.raise_spam_flag(annot1, user2, session)
-        mnrd.raise_spam_flag(annot1, user1, session)
-        mnrd.raise_spam_flag(annot2, user2, session)
-        mnrd.raise_spam_flag(annot2, user1, session)
+        mnrd.raise_spam_flag(annot1, user2, session, algo_name = su.ALGO_KARGER)
+        mnrd.raise_spam_flag(annot1, user1, session, algo_name = su.ALGO_KARGER)
+        mnrd.raise_spam_flag(annot2, user2, session, algo_name = su.ALGO_KARGER)
+        mnrd.raise_spam_flag(annot2, user1, session, algo_name = su.ALGO_KARGER)
 
         mnrd.run_offline_spam_detection('karger', session)
         self.assertTrue(annot1.spam_flag_counter == 2)
@@ -92,25 +96,26 @@ class TestSpamFlag(unittest.TestCase):
         self.assertTrue(user1.sk_base_reliab == 0)
 
         # Changing spam to ham
-        mnrd.raise_ham_flag(annot1, user2, session)
-        mnrd.raise_ham_flag(annot1, user1, session)
-        mnrd.raise_ham_flag(annot2, user2, session)
-        mnrd.raise_ham_flag(annot2, user1, session)
+        mnrd.raise_ham_flag(annot1, user2, session, algo_name = su.ALGO_KARGER)
+        mnrd.raise_ham_flag(annot1, user1, session, algo_name = su.ALGO_KARGER)
+        mnrd.raise_ham_flag(annot2, user2, session, algo_name = su.ALGO_KARGER)
+        mnrd.raise_ham_flag(annot2, user1, session, algo_name = su.ALGO_KARGER)
         mnrd.run_offline_spam_detection('karger', session)
         self.assertTrue(annot1.spam_flag_counter == 0)
         self.assertTrue(annot1.sk_weight > 0)
         self.assertTrue(user1.sk_karma_user_reliab > 0)
 
         # Testing one online update.
-        mnrd.raise_spam_flag(annot3, user1, session)
+        mnrd.raise_spam_flag(annot3, user1, session, algo_name = su.ALGO_KARGER)
         val = user1.sk_reliab
         self.assertTrue(annot3.sk_weight < 0)
-        mnrd.raise_ham_flag(annot3, user1, session)
+        mnrd.raise_ham_flag(annot3, user1, session, algo_name = su.ALGO_KARGER)
         self.assertTrue(annot3.sk_weight > 0)
         self.assertTrue(user1.sk_reliab > 0 and user1.sk_reliab < val)
 
         # Testing karma user.
-        annot4 = ModeratedAnnotation('www.example.com', 'annot4', user1)
+        annot4 = ModeratedAnnotation('www.example.com', 'annot4', user1,
+                                            spam_detect_algo=su.ALGO_KARGER)
         session.add(annot4)
         session.flush()
         self.assertTrue(annot4.sk_weight > 0)
@@ -118,7 +123,7 @@ class TestSpamFlag(unittest.TestCase):
         items = mnrd.get_n_items_for_spam_mm_randomly(2, session)
         print 'items for spam metamoderation', items
         # Deleting spam item by the author
-        mnrd.delete_spam_item_by_author(annot4, session)
+        mnrd.delete_spam_item_by_author(annot4, session, algo_name = su.ALGO_KARGER)
         annot4_true = ItemMixin.cls.get_item(annot4.id, session)
         self.assertTrue(annot4_true is None)
 
@@ -135,18 +140,19 @@ class TestSpamFlag(unittest.TestCase):
         user5 = User()
         session.add_all([user1, user2, user3, user4, user5])
         session.flush()
-        annot1 = ModeratedAnnotation('www.example.com', 'annot1', user1)
-        annot2 = ModeratedAnnotation('www.example.com', 'annot2', user2)
-        annot3 = ModeratedAnnotation('www.example.com', 'annot3', user3)
+        annot1 = ModeratedAnnotation('www.example.com', 'annot1', user1,
+                                            spam_detect_algo=su.ALGO_KARGER)
+        annot2 = ModeratedAnnotation('www.example.com', 'annot2', user2,
+                                            spam_detect_algo=su.ALGO_KARGER)
+        annot3 = ModeratedAnnotation('www.example.com', 'annot3', user3,
+                                            spam_detect_algo=su.ALGO_KARGER)
         session.add_all([annot1, annot2, annot3])
         session.commit()
 
         # Adds a flag and deletes it.
-        mnrd.raise_spam_flag(annot1, user2, session)
-        mnrd.raise_spam_flag(annot1, user3, session)
-        #mnrd.raise_spam_flag(annot2, user2, session)
-        mnrd.raise_ham_flag(annot2, user3, session)
-        #mnrd.raise_ham_flag(annot1, user4, session)
+        mnrd.raise_spam_flag(annot1, user2, session, algo_name = su.ALGO_KARGER)
+        mnrd.raise_spam_flag(annot1, user3, session, algo_name = su.ALGO_KARGER)
+        mnrd.raise_ham_flag(annot2, user3, session, algo_name = su.ALGO_KARGER)
         mnrd.run_offline_spam_detection('karger', session)
         print 'annot1 spam weight', annot1.sk_weight
         print 'annot2 spam weight', annot2.sk_weight

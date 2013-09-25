@@ -51,7 +51,7 @@ def run_offline_spam_detection(algo_name, session):
     session.flush()
 
 
-def raise_spam_flag(item, user, session, algo_name=su.ALGO_KARGER):
+def raise_spam_flag(item, user, session, algo_name=su.ALGO_DIRICHLET):
     timestamp = datetime.utcnow()
     if algo_name == su.ALGO_KARGER:
         sdk.flag_spam(item, user, timestamp, session)
@@ -59,7 +59,7 @@ def raise_spam_flag(item, user, session, algo_name=su.ALGO_KARGER):
         sdd.flag_spam(item, user, timestamp, session)
 
 
-def raise_ham_flag(item, user, session, algo_name=su.ALGO_KARGER):
+def raise_ham_flag(item, user, session, algo_name=su.ALGO_DIRICHLET):
     timestamp = datetime.utcnow()
     if algo_name == su.ALGO_KARGER:
         sdk.flag_ham(item, user, timestamp, session)
@@ -81,7 +81,7 @@ def get_n_items_for_spam_mm_randomly(n, session):
    return ItemMixin.cls.get_n_items_for_spam_mm_randomly(n, session)
 
 
-def delete_spam_item_by_author(item, session, algo_name=su.ALGO_KARGER):
+def delete_spam_item_by_author(item, session, algo_name=su.ALGO_DIRICHLET):
     """ If item is deleted by author then there is no reputation damage to the
     author, plus users who flagged it receive boost to base reliability.
     """
@@ -107,7 +107,7 @@ def delete_spam_item_by_author(item, session, algo_name=su.ALGO_KARGER):
 
 
 def add_item(page_url, item_id, user, session, parent_id=None, action_type=None,
-             spam_detect_algo=su.ALGO_KARGER):
+             spam_detect_algo=su.ALGO_DIRICHLET):
     """ Creates an item and adds it to the db."""
     annot = ItemMixin.cls(page_url, item_id, user, parent_id=parent_id,
                           spam_detect_algo=spam_detect_algo)
@@ -134,7 +134,7 @@ def add_item(page_url, item_id, user, session, parent_id=None, action_type=None,
 
 
 def get_add_item(page_url, item_id, user, session, parent_id=None,
-             action_type=None, spam_detect_algo=su.ALGO_KARGER):
+             action_type=None, spam_detect_algo=su.ALGO_DIRICHLET):
     annot = ItemMixin.cls.get_item(item_id, session)
     # If annotation does not exist then create it.
     if annot is None:
