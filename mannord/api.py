@@ -168,7 +168,7 @@ def delete_item(item, session):
     session.flush()
 
 
-def get_add_user(user_id):
+def get_add_user(user_id, session):
     """ The function retruns a user by its id (string), if the user record
     does not exist then the function creates it and retunrs user object."""
     user = UserMixin.cls.get_user(user_id, session)

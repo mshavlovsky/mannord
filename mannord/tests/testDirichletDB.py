@@ -55,18 +55,15 @@ class TestSpamFlag(unittest.TestCase):
         ModerationUser = UserMixin.cls
 
         # Creates users and annotations
-        user1 = ModerationUser('user1')
-        user2 = ModerationUser('user2')
-        user3 = ModerationUser('user3')
-        session.add_all([user1, user2, user3])
-        session.flush()
-        annot1 = ModeratedAnnotation('www.example.com', 'annot1', user1,
-                                     spam_detect_algo=su.ALGO_DIRICHLET)
-        annot2 = ModeratedAnnotation('www.example.com', 'annot2', user1,
-                                     spam_detect_algo=su.ALGO_DIRICHLET)
-        annot3 = ModeratedAnnotation('www.example.com', 'annot3', user3,
-                                     spam_detect_algo=su.ALGO_DIRICHLET)
-        session.add_all([annot1, annot2, annot3])
+        user1 = mnrd.get_add_user('user1', session)
+        user2 = mnrd.get_add_user('user2', session)
+        user3 = mnrd.get_add_user('user3', session)
+        annot1 = mnrd.get_add_item('www.example.com', 'annot1', user1,
+                                    session, spam_detect_algo=su.ALGO_DIRICHLET)
+        annot2 = mnrd.get_add_item('www.example.com', 'annot2', user1,
+                                    session, spam_detect_algo=su.ALGO_DIRICHLET)
+        annot3 = mnrd.get_add_item('www.example.com', 'annot3', user3,
+                                    session, spam_detect_algo=su.ALGO_DIRICHLET)
         session.commit()
 
         # Adds a flag and deletes it.
@@ -132,23 +129,19 @@ class TestSpamFlag(unittest.TestCase):
         ModerationUser = UserMixin.cls
 
         # Creates users and annotations
-        user1 = ModerationUser('user1')
-        user2 = ModerationUser('user2')
-        user3 = ModerationUser('user3')
-        user4 = ModerationUser('user4')
-        user5 = ModerationUser('user5')
-        user6 = ModerationUser('user6')
-        user7 = ModerationUser('user7')
-        session.add_all([user1, user2, user3, user4, user5, user6, user7])
-        session.flush()
-        annot1 = ModeratedAnnotation('www.example.com', 'annot1', user1,
-                                     spam_detect_algo=su.ALGO_DIRICHLET)
-        annot2 = ModeratedAnnotation('www.example.com', 'annot2', user1,
-                                     spam_detect_algo=su.ALGO_DIRICHLET)
-        annot3 = ModeratedAnnotation('www.example.com', 'annot3', user3,
-                                     spam_detect_algo=su.ALGO_DIRICHLET)
-        session.add_all([annot1, annot2, annot3])
-        session.commit()
+        user1 = mnrd.get_add_user('user1', session)
+        user2 = mnrd.get_add_user('user2', session)
+        user3 = mnrd.get_add_user('user3', session)
+        user4 = mnrd.get_add_user('user4', session)
+        user5 = mnrd.get_add_user('user5', session)
+        user6 = mnrd.get_add_user('user6', session)
+        user7 = mnrd.get_add_user('user7', session)
+        annot1 = mnrd.get_add_item('www.example.com', 'annot1', user1,
+                                    session, spam_detect_algo=su.ALGO_DIRICHLET)
+        annot2 = mnrd.get_add_item('www.example.com', 'annot2', user1,
+                                    session, spam_detect_algo=su.ALGO_DIRICHLET)
+        annot3 = mnrd.get_add_item('www.example.com', 'annot3', user3,
+                                    session, spam_detect_algo=su.ALGO_DIRICHLET)
 
         # Adds a flag and deletes it.
         #mnrd.raise_spam_flag(annot1, user2, session, algo_name=algo_name)
