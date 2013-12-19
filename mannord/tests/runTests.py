@@ -12,13 +12,6 @@ import mannord as mnrd
 Base = declarative_base()
 
 
-class User(Base, UserMixin):
-
-    __tablename__ = 'user'
-
-    def __init__(self):
-        pass
-
 
 # Creates/binds engine and bootstraps mannord
 engine = create_engine('sqlite:///:memory:')
@@ -43,10 +36,12 @@ class TestSpamFlag(unittest.TestCase):
         recreate_tables()
         ModeratedAnnotation = ItemMixin.cls
         Action = ActionMixin.cls
+        ModerationUser = UserMixin.cls
 
-        user1 = User()
-        user2 = User()
-        user3 = User()
+        # Creates users and annotations
+        user1 = ModerationUser('user1')
+        user2 = ModerationUser('user2')
+        user3 = ModerationUser('user3')
         session.add_all([user1, user2, user3])
         session.flush()
 
@@ -86,9 +81,11 @@ class TestSpamFlag(unittest.TestCase):
 
         ModeratedAnnotation = ItemMixin.cls
         Action = ActionMixin.cls
+        ModerationUser = UserMixin.cls
 
-        user1 = User()
-        user2 = User()
+        # Creates users and annotations
+        user1 = ModerationUser('user1')
+        user2 = ModerationUser('user2')
         session.add_all([user1, user2])
         session.flush()
 

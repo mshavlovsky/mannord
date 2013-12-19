@@ -12,12 +12,6 @@ import mannord as mnrd
 Base = declarative_base()
 
 
-class User(Base, UserMixin):
-
-    __tablename__ = 'user'
-
-    def __init__(self):
-        pass
 
 
 class TestHITS(unittest.TestCase):
@@ -61,13 +55,15 @@ class TestHITS(unittest.TestCase):
         mnrd.bind_engine(engine, Session, Base)
         mnrd.bootstrap(Base, create_all=True)
         ModeratedAnnotation = ItemMixin.cls
+        ModerationUser = UserMixin.cls
 
         # Creates users and annotations
-        user1 = User()
-        user2 = User()
-        user3 = User()
-        user4 = User()
-        user5 = User()
+        user1 = ModerationUser('user1')
+        user2 = ModerationUser('user2')
+        user3 = ModerationUser('user3')
+        user4 = ModerationUser('user4')
+        user5 = ModerationUser('user5')
+
         session.add_all([user1, user2, user3, user4, user5])
         session.flush()
         annot1 = ModeratedAnnotation('www.example1.com', 'annot1', user1)

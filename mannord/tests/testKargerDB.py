@@ -13,13 +13,6 @@ import mannord.spam_utils as su
 Base = declarative_base()
 
 
-class User(Base, UserMixin):
-
-    __tablename__ = 'user'
-
-    def __init__(self):
-        pass
-
 
 def print_actions_sk(session):
     actions = ActionMixin.cls.sk_get_actions_offline_spam_detect(session)
@@ -54,11 +47,12 @@ class TestSpamFlag(unittest.TestCase):
     def test_spam_flag_karger(self):
         recreate_tables()
         ModeratedAnnotation = ItemMixin.cls
+        ModerationUser = UserMixin.cls
 
         # Creates users and annotations
-        user1 = User()
-        user2 = User()
-        user3 = User()
+        user1 = ModerationUser('user1')
+        user2 = ModerationUser('user2')
+        user3 = ModerationUser('user3')
         session.add_all([user1, user2, user3])
         session.flush()
         annot1 = ModeratedAnnotation('www.example.com', 'annot1', user1,
@@ -131,13 +125,15 @@ class TestSpamFlag(unittest.TestCase):
     def test_spam_flag_karger_2(self):
         recreate_tables()
         ModeratedAnnotation = ItemMixin.cls
+        ModerationUser = UserMixin.cls
 
         # Creates users and annotations
-        user1 = User()
-        user2 = User()
-        user3 = User()
-        user4 = User()
-        user5 = User()
+        user1 = ModerationUser('user1')
+        user2 = ModerationUser('user2')
+        user3 = ModerationUser('user3')
+        user4 = ModerationUser('user4')
+        user5 = ModerationUser('user5')
+
         session.add_all([user1, user2, user3, user4, user5])
         session.flush()
         annot1 = ModeratedAnnotation('www.example.com', 'annot1', user1,
