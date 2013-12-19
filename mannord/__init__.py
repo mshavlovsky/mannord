@@ -10,5 +10,6 @@ from api import (bind_engine, bootstrap,
                  delete_item,
                  add_item, get_add_item,
                  upvote, undo_upvote,
-                 downvote, undo_downvote)
+                 downvote, undo_downvote,
+                 get_add_user)
 
