@@ -22,6 +22,7 @@ ini_config.readfp(open(file_path_config))
 
 # Constants
 USER_TABLE_ID_FIELD = ini_config.get('names','USER_TABLE_ID_FIELD')
+USER_TABLE_NAME = ini_config.get('names', 'USER_TABLE_NAME')
 USER_CLASS_NAME =  ini_config.get('names','USER_CLASS_NAME')
 ITEM_TABLE_ID_FIELD =  ini_config.get('names', 'ITEM_TABLE_ID_FIELD')
 ITEM_CLASS_NAME =  ini_config.get('names', 'ITEM_CLASS_NAME')
@@ -49,11 +50,12 @@ STRING_FIELD_LENGTH = 32
 
 class UserMixin(UserDirichletMixin, UserKargerMixin, object):
 
+    __tablename__ = USER_TABLE_NAME
     cls = None
 
     @declared_attr
     def id(cls):
-        return Column(Integer, autoincrement=True, primary_key=True)
+        return Column(String(STRING_FIELD_LENGTH), primary_key=True)
 
     @declared_attr
     def is_spammer(cls):
@@ -66,6 +68,15 @@ class UserMixin(UserDirichletMixin, UserKargerMixin, object):
     @declared_attr
     def mm_vote_counter(cls):
         return Column(Integer, default=0)
+
+    @classmethod
+    def get_user(cls, user_id, session):
+        user = session.query(cls).filter_by(id = user_id).first()
+        return user
+
+
+    def __init__(self, user_id):
+        self.id = user_id
 
 
 class ItemMixin(ItemDirichletMixin, ItemKargerMixin, object):
@@ -82,7 +93,7 @@ class ItemMixin(ItemDirichletMixin, ItemKargerMixin, object):
     # Authors's id
     @declared_attr
     def author_id(cls):
-        return Column(Integer, ForeignKey(USER_TABLE_ID_FIELD))
+        return Column(String(STRING_FIELD_LENGTH), ForeignKey(USER_TABLE_ID_FIELD))
 
     @declared_attr
     def author(cls):
@@ -179,7 +190,7 @@ class ActionMixin(ActionDirichletMixin, ActionKargerMixin, object):
     # user_id is an id of an author who did the action.
     @declared_attr
     def user_id(cls):
-        return Column(Integer, ForeignKey(USER_TABLE_ID_FIELD))
+        return Column(String(STRING_FIELD_LENGTH), ForeignKey(USER_TABLE_ID_FIELD))
 
     @declared_attr
     def user(cls):

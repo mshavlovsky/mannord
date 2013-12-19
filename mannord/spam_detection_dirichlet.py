@@ -52,7 +52,7 @@ def _add_spam_info_to_graph_d(graph, items, actions):
             continue
     for it in items:
         # Creates karma user (old "null" user)
-        graph.add_answer(-it.author.id, it.id, KARMA_USER_VOTE,
+        graph.add_answer('-' + it.author.id, it.id, KARMA_USER_VOTE,
           base_u_n = it.author.sd_base_u_n, base_u_p = it.author.sd_base_u_p)
 
 
@@ -77,7 +77,8 @@ def _from_graph_to_db(graph, items, actions):
             it.sk_weight < THRESHOLD_DEFINITELY_SPAM):
             it.sk_frozen = True
         # Saves reliability of a spam karma user related to an author of the item
-        user_d = graph.get_user(-it.author.id)
+        # Reliability user has "-" in from of it's id.
+        user_d = graph.get_user('-' + it.author.id)
         it.author.sd_karma_user_reliab = user_d.reliability
         it.author.sd_karma_user_u_n = user_d.u_n
         it.author.sd_karma_user_u_p = user_d.u_p

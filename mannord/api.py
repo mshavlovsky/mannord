@@ -32,9 +32,13 @@ def bootstrap(base, create_all=False):
     class ModeratedAnnotation(ItemMixin, base):
         pass
 
+    class ModerationUser(UserMixin, base):
+        pass
+
     ActionMixin.cls = ModerationAction
     ItemMixin.cls = ModeratedAnnotation
     ComputationMixin.cls = Computation
+    UserMixin.cls = ModerationUser
 
     if create_all:
         base.metadata.create_all(base.metadata.bind)
@@ -142,6 +146,7 @@ def get_add_item(page_url, item_id, user, session, parent_id=None,
                      action_type=action_type, spam_detect_algo=spam_detect_algo)
     return annot
 
+
 def delete_item(item, session):
     # If the item is action, then delete this action and then delete the item.
     if item.children is not None and len(item.children) != 0:
@@ -161,6 +166,18 @@ def delete_item(item, session):
         session.delete(item.action_twin)
     session.delete(item)
     session.flush()
+
+
+def get_add_user(user_id):
+    """ The function retruns a user by its id (string), if the user record
+    does not exist then the function creates it and retunrs user object."""
+    user = UserMixin.cls.get_user(user_id, session)
+    if user is None:
+        user = UserMixin.cls(user_id)
+        session.add(user)
+        session.flush()
+    return user
+
 
 def upvote(item, user, session):
     # Checks whether the user has upvoted the item
